@@ -1,0 +1,37 @@
+{
+  "args0": [
+    {
+      "type": "field_data_list_selector",
+      "name": "element",
+      "datalist": "customEntity"
+    },
+    {
+      "type": "input_value",
+      "name": "entity",
+      "check": "Entity"
+    },
+    {
+      "type": "input_value",
+      "name": "texture",
+      "check": "String"
+    }
+  ],
+  "inputsInline": true,
+  "previousStatement": null,
+  "nextStatement": null,
+  "colour": 195,
+  "mcreator": {
+    "toolbox_id": "better_animations",
+    "toolbox_init": [
+      "<value name=\"entity\"><block type=\"entity_from_deps\"></block></value>",
+      "<value name=\"texture\"><block type=\"text\"><field name=\"TEXT\">texture name</field></block></value>"
+    ],
+    "inputs": [
+      "entity",
+      "texture"
+     ],
+    "fields": [
+      "element"
+    ]
+  }
+}

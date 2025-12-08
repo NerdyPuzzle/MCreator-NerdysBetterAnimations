@@ -1,0 +1,46 @@
+{
+  "args0": [
+    {
+      "type": "input_value",
+      "name": "item",
+      "check": "MCItem"
+    },
+    {
+      "type": "field_dropdown",
+      "name": "operation",
+      "options": [
+        [
+          "play",
+          " "
+        ],
+        [
+          "stop",
+          "-1 - "
+        ]
+      ]
+    },
+    {
+      "type": "input_value",
+      "name": "value",
+      "check": "Number"
+    }
+  ],
+  "inputsInline": true,
+  "colour": 350,
+  "previousStatement": null,
+  "nextStatement": null,
+  "mcreator": {
+    "toolbox_id": "better_animations",
+    "toolbox_init": [
+      "<value name=\"item\"><block type=\"itemstack_to_mcitem\"></block></value>",
+      "<value name=\"value\"><block type=\"math_number\"><field name=\"NUM\">0</field></block></value>",
+    ],
+    "fields": [
+      "operation"
+    ],
+    "inputs": [
+      "item",
+      "value"
+    ]
+  }
+}
