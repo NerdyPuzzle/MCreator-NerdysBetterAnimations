@@ -179,24 +179,28 @@ public class ${name}Entity extends ${extendsClass} <#if interfaces?size gt 0>imp
 	}
 	
 	<#if data.animations?size != 0>
-    @Override
-    public void onSyncedDataUpdated(EntityDataAccessor<?> data) {
-        if (ANIM.equals(data)) {
-            switch (this.entityData.get(ANIM)) {
+	@Override
+	public void onSyncedDataUpdated(EntityDataAccessor<?> data) {
+		if (ANIM.equals(data)) {
+			switch (this.entityData.get(ANIM)) {
 				<#list data.animations as animation>
-				case -${animation?index + 1}:
-					this.animationState${animation?index}.stop();
-					break;
+					<#if !animation.walking>
+					case -${animation?index + 1}:
+						this.animationState${animation?index}.stop();
+						break;
+					</#if>
 				</#list>
-                <#list data.animations as animation>
-				case ${animation?index}:
-					this.animationState${animation?index}.start(this.tickCount);
-					break;
+				<#list data.animations as animation>
+					<#if !animation.walking>
+						case ${animation?index}:
+						this.animationState${animation?index}.start(this.tickCount);
+						break;
+					</#if>
 				</#list>
-            }
-        }
-        super.onSyncedDataUpdated(data);
-    }
+			}
+		}
+		super.onSyncedDataUpdated(data);
+	}
 	</#if>
 
 	@Override protected void defineSynchedData(SynchedEntityData.Builder builder) {
