@@ -102,15 +102,17 @@ public class ${name}ItemRenderer extends BlockEntityWithoutLevelRenderer {
 		boolean isFirstPerson = displayContext == ItemDisplayContext.FIRST_PERSON_LEFT_HAND || displayContext == ItemDisplayContext.FIRST_PERSON_RIGHT_HAND;
 		boolean isThirdPerson = displayContext == ItemDisplayContext.THIRD_PERSON_LEFT_HAND || displayContext == ItemDisplayContext.THIRD_PERSON_RIGHT_HAND;
 		/*@perspective*/
-		if (model instanceof AnimatedModel animatedModel && isFirstPerson && Minecraft.getInstance().player != null && (animatedModel.animator.root().getChild("left_arm") != null || animatedModel.animator.root().getChild("right_arm") != null)) {
-			AbstractClientPlayer player = Minecraft.getInstance().player;
-			PlayerRenderer playerRenderer = (PlayerRenderer) Minecraft.getInstance().getEntityRenderDispatcher().getRenderer(player);
-			PlayerModel<?> playerModel = playerRenderer.getModel();
-			ResourceLocation skinTexture = player.getSkin().texture();
-			ItemArms.renderPartWithArms(animatedModel.animator, poseStack, vertexConsumer, bufferSource, packedLight, packedOverlay, playerModel, skinTexture, player.isInvisible());
-		} else {
-			model.renderToBuffer(poseStack, vertexConsumer, packedLight, packedOverlay);
-		}
+		try {
+		    if (model instanceof AnimatedModel animatedModel && isFirstPerson && Minecraft.getInstance().player != null && (animatedModel.animator.root().getChild("left_arm") != null || animatedModel.animator.root().getChild("right_arm") != null)) {
+			    AbstractClientPlayer player = Minecraft.getInstance().player;
+			    PlayerRenderer playerRenderer = (PlayerRenderer) Minecraft.getInstance().getEntityRenderDispatcher().getRenderer(player);
+			    PlayerModel<?> playerModel = playerRenderer.getModel();
+			    ResourceLocation skinTexture = player.getSkin().texture();
+			    ItemArms.renderPartWithArms(animatedModel.animator, poseStack, vertexConsumer, bufferSource, packedLight, packedOverlay, playerModel, skinTexture, player.isInvisible());
+		    } else {
+			    model.renderToBuffer(poseStack, vertexConsumer, packedLight, packedOverlay);
+		    }
+		} catch (Exception ignored) {}
 		<#else>
 		    VertexConsumer vertexConsumer = ItemRenderer.getFoilBufferDirect(bufferSource, model.renderType(texture), false, itemstack.hasFoil());
 		    model.setupAnim(null, 0, 0, (System.currentTimeMillis() - start) / 50.0f, 0, 0);

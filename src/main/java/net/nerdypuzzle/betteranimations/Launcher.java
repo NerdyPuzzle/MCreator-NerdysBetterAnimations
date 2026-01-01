@@ -43,185 +43,218 @@ public class Launcher extends JavaPlugin {
 	public Launcher(Plugin plugin) {
 		super(plugin);
 
-		addListener(ModElementGUIEvent.AfterLoading.class, event -> {
-			if (event.getModElementGUI() instanceof ItemGUI gui) {
-				try {
-					Field renderTypeField = ItemGUI.class.getDeclaredField("renderType");
-					renderTypeField.setAccessible(true);
-					SearchableComboBox<Model> renderType = (SearchableComboBox<Model>) renderTypeField.get(gui);
+        addListener(ModElementGUIEvent.AfterLoading.class, event -> {
+            if (event.getModElementGUI() instanceof ItemGUI gui) {
+                try {
+                    Field renderTypeField = ItemGUI.class.getDeclaredField("renderType");
+                    renderTypeField.setAccessible(true);
+                    SearchableComboBox<Model> renderType = (SearchableComboBox<Model>) renderTypeField.get(gui);
 
-					Container rentPanel = renderType.getParent();
-					Container parentOfRent = rentPanel.getParent();
-					parentOfRent.remove(rentPanel);
+                    Container rentPanel = renderType.getParent();
+                    Container parentOfRent = rentPanel.getParent();
+                    parentOfRent.remove(rentPanel);
 
-					JPanel rent = new JPanel(new GridLayout(-1, 2, 2, 2));
-					rent.setOpaque(false);
+                    JPanel rent = new JPanel(new GridLayout(-1, 2, 2, 2));
+                    rent.setOpaque(false);
 
-					rent.add(HelpUtils.wrapWithHelpButton(gui.withEntry("item/model"), L10N.label("elementgui.item.item_model")));
-					rent.add(renderType);
+                    rent.add(HelpUtils.wrapWithHelpButton(gui.withEntry("item/model"), L10N.label("elementgui.item.item_model")));
+                    rent.add(renderType);
 
-					Field guiTextureField = ItemGUI.class.getDeclaredField("guiTexture");
-					guiTextureField.setAccessible(true);
-					rent.add(HelpUtils.wrapWithHelpButton(gui.withEntry("item/gui_texture"), L10N.label("elementgui.common.item_gui_texture")));
-					rent.add(PanelUtils.centerInPanel((Component) guiTextureField.get(gui)));
+                    Field guiTextureField = ItemGUI.class.getDeclaredField("guiTexture");
+                    guiTextureField.setAccessible(true);
+                    rent.add(HelpUtils.wrapWithHelpButton(gui.withEntry("item/gui_texture"), L10N.label("elementgui.common.item_gui_texture")));
+                    rent.add(PanelUtils.centerInPanel((Component) guiTextureField.get(gui)));
 
-					JComponent label = HelpUtils.wrapWithHelpButton(gui.withEntry("item/display_settings"), L10N.label("elementgui.item.display_settings"));
+                    JComponent label = HelpUtils.wrapWithHelpButton(gui.withEntry("item/display_settings"), L10N.label("elementgui.item.display_settings"));
 
-					SearchableComboBox<Model> jsonModelSelector = new SearchableComboBox<>(Model.getModelsWithTextureMaps(gui.getMCreator().getWorkspace()).stream()
-							.filter(el -> el.getType() == Model.Type.JSON)
-							.collect(Collectors.toList()));
-					ComponentUtils.deriveFont(jsonModelSelector, 16);
-					jsonModelSelector.setPreferredSize(new Dimension(350, 42));
-					jsonModelSelector.setRenderer(new ModelComboBoxRenderer());
-					loadedSelectors.put(gui, jsonModelSelector);
+                    SearchableComboBox<Model> jsonModelSelector = new SearchableComboBox<>(Model.getModelsWithTextureMaps(gui.getMCreator().getWorkspace()).stream()
+                            .filter(el -> el.getType() == Model.Type.JSON)
+                            .collect(Collectors.toList()));
+                    ComponentUtils.deriveFont(jsonModelSelector, 16);
+                    jsonModelSelector.setPreferredSize(new Dimension(350, 42));
+                    jsonModelSelector.setRenderer(new ModelComboBoxRenderer());
+                    loadedSelectors.put(gui, jsonModelSelector);
 
-					JComponent perspectiveLabel = HelpUtils.wrapWithHelpButton(gui.withEntry("item/animation_perspectives"),
-							L10N.label("elementgui.item.animation_perspectives"));
-					JComboBox<String> animationPerspectives = new JComboBox<>(new String[]{
-							"All perspectives",
-							"Only in first person",
-							"Only in third person"
-					});
-					ComponentUtils.deriveFont(animationPerspectives, 16);
-					animationPerspectives.setPreferredSize(new Dimension(350, 42));
-					perspectiveSelectors.put(gui, animationPerspectives);
+                    JComponent perspectiveLabel = HelpUtils.wrapWithHelpButton(gui.withEntry("item/animation_perspectives"),
+                            L10N.label("elementgui.item.animation_perspectives"));
+                    JComboBox<String> animationPerspectives = new JComboBox<>(new String[]{
+                            "All perspectives",
+                            "Only in first person",
+                            "Only in third person"
+                    });
+                    ComponentUtils.deriveFont(animationPerspectives, 16);
+                    animationPerspectives.setPreferredSize(new Dimension(350, 42));
+                    perspectiveSelectors.put(gui, animationPerspectives);
 
-					Workspace workspace = gui.getMCreator().getWorkspace();
-					String elementName = gui.getModElement().getName();
+                    Workspace workspace = gui.getMCreator().getWorkspace();
+                    String elementName = gui.getModElement().getName();
 
-					Object metadataRaw = workspace.getMetadata(METADATA_KEY);
-					if (metadataRaw instanceof Map) {
-						try {
-							@SuppressWarnings("unchecked")
-							Map<String, String> modelMap = (Map<String, String>) metadataRaw;
-							if (modelMap.containsKey(elementName)) {
-								String savedModelName = modelMap.get(elementName);
-								for (int i = 0; i < jsonModelSelector.getItemCount(); i++) {
-									Model m = jsonModelSelector.getItemAt(i);
-									if (m.getReadableName().equals(savedModelName)) {
-										jsonModelSelector.setSelectedItem(m);
-										break;
-									}
-								}
-							}
-						} catch (Exception ex) {
-							LOG.error("Failed to load custom model metadata", ex);
-						}
-					}
+                    Object metadataRaw = workspace.getMetadata(METADATA_KEY);
+                    if (metadataRaw instanceof Map) {
+                        try {
+                            @SuppressWarnings("unchecked")
+                            Map<String, String> modelMap = (Map<String, String>) metadataRaw;
+                            if (modelMap.containsKey(elementName)) {
+                                String savedModelName = modelMap.get(elementName);
+                                for (int i = 0; i < jsonModelSelector.getItemCount(); i++) {
+                                    Model m = jsonModelSelector.getItemAt(i);
+                                    if (m.getReadableName().equals(savedModelName)) {
+                                        jsonModelSelector.setSelectedItem(m);
+                                        break;
+                                    }
+                                }
+                            }
+                        } catch (Exception ex) {
+                            LOG.error("Failed to load custom model metadata", ex);
+                        }
+                    }
 
-					Object perspectiveMetadataRaw = workspace.getMetadata(PERSPECTIVE_METADATA_KEY);
-					if (perspectiveMetadataRaw instanceof Map) {
-						try {
-							@SuppressWarnings("unchecked")
-							Map<String, String> perspectiveMap = (Map<String, String>) perspectiveMetadataRaw;
-							if (perspectiveMap.containsKey(elementName)) {
-								String savedPerspective = perspectiveMap.get(elementName);
-								animationPerspectives.setSelectedItem(savedPerspective);
-							}
-						} catch (Exception ex) {
-							LOG.error("Failed to load perspective metadata", ex);
-						}
-					}
+                    Object perspectiveMetadataRaw = workspace.getMetadata(PERSPECTIVE_METADATA_KEY);
+                    if (perspectiveMetadataRaw instanceof Map) {
+                        try {
+                            @SuppressWarnings("unchecked")
+                            Map<String, String> perspectiveMap = (Map<String, String>) perspectiveMetadataRaw;
+                            if (perspectiveMap.containsKey(elementName)) {
+                                String savedPerspective = perspectiveMap.get(elementName);
+                                animationPerspectives.setSelectedItem(savedPerspective);
+                            }
+                        } catch (Exception ex) {
+                            LOG.error("Failed to load perspective metadata", ex);
+                        }
+                    }
 
-					Runnable updateLayout = () -> {
-						rent.remove(label);
-						rent.remove(jsonModelSelector);
-						rent.remove(perspectiveLabel);
-						rent.remove(animationPerspectives);
+                    Runnable updateLayout = () -> {
+                        rent.remove(label);
+                        rent.remove(jsonModelSelector);
+                        rent.remove(perspectiveLabel);
+                        rent.remove(animationPerspectives);
 
-						Model model = renderType.getSelectedItem();
-						if (model != null && model.getType() == Model.Type.JAVA) {
-							rent.add(label, 2);
-							rent.add(jsonModelSelector, 3);
-							rent.add(perspectiveLabel, 4);
-							rent.add(animationPerspectives, 5);
-						}
+                        Model model = renderType.getSelectedItem();
+                        if (model != null && model.getType() == Model.Type.JAVA) {
+                            rent.add(label, 2);
+                            rent.add(jsonModelSelector, 3);
+                            rent.add(perspectiveLabel, 4);
+                            rent.add(animationPerspectives, 5);
+                        }
 
-						rent.revalidate();
-						rent.repaint();
-					};
+                        rent.revalidate();
+                        rent.repaint();
+                    };
 
-					renderType.addActionListener(e -> updateLayout.run());
-					updateLayout.run();
+                    renderType.addActionListener(e -> updateLayout.run());
+                    updateLayout.run();
 
-					rent.setBorder(BorderFactory.createTitledBorder(
-							BorderFactory.createLineBorder(Theme.current().getForegroundColor(), 1),
-							L10N.t("elementgui.item.item_3d_model"),
-							0, 0, gui.getFont().deriveFont(12.0f),
-							Theme.current().getForegroundColor()));
+                    rent.setBorder(BorderFactory.createTitledBorder(
+                            BorderFactory.createLineBorder(Theme.current().getForegroundColor(), 1),
+                            L10N.t("elementgui.item.item_3d_model"),
+                            0, 0, gui.getFont().deriveFont(12.0f),
+                            Theme.current().getForegroundColor()));
 
-					parentOfRent.add(rent, BorderLayout.CENTER);
-					parentOfRent.revalidate();
-					parentOfRent.repaint();
+                    parentOfRent.add(rent, BorderLayout.CENTER);
+                    parentOfRent.revalidate();
+                    parentOfRent.repaint();
 
-				} catch (NoSuchFieldException | IllegalAccessException e) {
-					e.printStackTrace();
-					LOG.error("Failed to replace rent panel: " + e.getMessage());
-				}
-			}
-		});
+                } catch (NoSuchFieldException | IllegalAccessException e) {
+                    e.printStackTrace();
+                    LOG.error("Failed to replace rent panel: " + e.getMessage());
+                }
+            }
+        });
 
-		addListener(ModElementGUIEvent.WhenSaving.class, event -> {
-			if (event.getModElementGUI() instanceof ItemGUI gui) {
-				Workspace workspace = gui.getMCreator().getWorkspace();
-				String elementName = gui.getModElement().getName();
-				boolean workspaceDirty = false;
+        addListener(ModElementGUIEvent.WhenSaving.class, event -> {
+            if (event.getModElementGUI() instanceof ItemGUI gui) {
+                try {
+                    Field renderTypeField = ItemGUI.class.getDeclaredField("renderType");
+                    renderTypeField.setAccessible(true);
+                    SearchableComboBox<Model> renderType = (SearchableComboBox<Model>) renderTypeField.get(gui);
+                    Model selectedRenderType = renderType.getSelectedItem();
 
-				if (loadedSelectors.containsKey(gui)) {
-					SearchableComboBox<Model> selector = loadedSelectors.get(gui);
-					Model selectedModel = selector.getSelectedItem();
+                    Workspace workspace = gui.getMCreator().getWorkspace();
+                    String elementName = gui.getModElement().getName();
+                    boolean workspaceDirty = false;
 
-					Object metadataRaw = workspace.getMetadata(METADATA_KEY);
-					Map<String, String> modelMap;
-					if (metadataRaw instanceof Map) {
-						modelMap = (Map<String, String>) metadataRaw;
-					} else {
-						modelMap = new LinkedHashMap<>();
-					}
+                    // Only save model metadata if a Java model is selected
+                    if (selectedRenderType != null && selectedRenderType.getType() == Model.Type.JAVA) {
+                        if (loadedSelectors.containsKey(gui)) {
+                            SearchableComboBox<Model> selector = loadedSelectors.get(gui);
+                            Model selectedModel = selector.getSelectedItem();
 
-					if (selectedModel != null) {
-						modelMap.put(elementName, selectedModel.getReadableName());
-					} else {
-						modelMap.remove(elementName);
-					}
+                            Object metadataRaw = workspace.getMetadata(METADATA_KEY);
+                            Map<String, String> modelMap;
+                            if (metadataRaw instanceof Map) {
+                                modelMap = (Map<String, String>) metadataRaw;
+                            } else {
+                                modelMap = new LinkedHashMap<>();
+                            }
 
-					workspace.putMetadata(METADATA_KEY, modelMap);
-					workspaceDirty = true;
-				}
+                            if (selectedModel != null) {
+                                modelMap.put(elementName, selectedModel.getReadableName());
+                            } else {
+                                modelMap.remove(elementName);
+                            }
 
-				if (perspectiveSelectors.containsKey(gui)) {
-					JComboBox<String> perspectiveSelector = perspectiveSelectors.get(gui);
-					String selectedPerspective = (String) perspectiveSelector.getSelectedItem();
+                            workspace.putMetadata(METADATA_KEY, modelMap);
+                            workspaceDirty = true;
+                        }
 
-					Object perspectiveMetadataRaw = workspace.getMetadata(PERSPECTIVE_METADATA_KEY);
-					Map<String, String> perspectiveMap;
-					if (perspectiveMetadataRaw instanceof Map) {
-						perspectiveMap = (Map<String, String>) perspectiveMetadataRaw;
-					} else {
-						perspectiveMap = new LinkedHashMap<>();
-					}
+                        if (perspectiveSelectors.containsKey(gui)) {
+                            JComboBox<String> perspectiveSelector = perspectiveSelectors.get(gui);
+                            String selectedPerspective = (String) perspectiveSelector.getSelectedItem();
 
-					if (selectedPerspective != null) {
-						perspectiveMap.put(elementName, selectedPerspective);
-					} else {
-						perspectiveMap.remove(elementName);
-					}
+                            Object perspectiveMetadataRaw = workspace.getMetadata(PERSPECTIVE_METADATA_KEY);
+                            Map<String, String> perspectiveMap;
+                            if (perspectiveMetadataRaw instanceof Map) {
+                                perspectiveMap = (Map<String, String>) perspectiveMetadataRaw;
+                            } else {
+                                perspectiveMap = new LinkedHashMap<>();
+                            }
 
-					workspace.putMetadata(PERSPECTIVE_METADATA_KEY, perspectiveMap);
-					workspaceDirty = true;
-				}
+                            if (selectedPerspective != null) {
+                                perspectiveMap.put(elementName, selectedPerspective);
+                            } else {
+                                perspectiveMap.remove(elementName);
+                            }
 
-				if (workspaceDirty) {
-					try {
-						Method markDirtyMethod = Workspace.class.getDeclaredMethod("markDirty");
-						markDirtyMethod.setAccessible(true);
-						markDirtyMethod.invoke(workspace);
-					} catch (Exception e) {
-						LOG.warn("Could not mark workspace as dirty via reflection", e);
-					}
-				}
-			}
-		});
+                            workspace.putMetadata(PERSPECTIVE_METADATA_KEY, perspectiveMap);
+                            workspaceDirty = true;
+                        }
+                    } else {
+                        // Remove metadata if not using Java model
+                        Object metadataRaw = workspace.getMetadata(METADATA_KEY);
+                        if (metadataRaw instanceof Map) {
+                            Map<String, String> modelMap = (Map<String, String>) metadataRaw;
+                            if (modelMap.containsKey(elementName)) {
+                                modelMap.remove(elementName);
+                                workspace.putMetadata(METADATA_KEY, modelMap);
+                                workspaceDirty = true;
+                            }
+                        }
+
+                        Object perspectiveMetadataRaw = workspace.getMetadata(PERSPECTIVE_METADATA_KEY);
+                        if (perspectiveMetadataRaw instanceof Map) {
+                            Map<String, String> perspectiveMap = (Map<String, String>) perspectiveMetadataRaw;
+                            if (perspectiveMap.containsKey(elementName)) {
+                                perspectiveMap.remove(elementName);
+                                workspace.putMetadata(PERSPECTIVE_METADATA_KEY, perspectiveMap);
+                                workspaceDirty = true;
+                            }
+                        }
+                    }
+
+                    if (workspaceDirty) {
+                        try {
+                            Method markDirtyMethod = Workspace.class.getDeclaredMethod("markDirty");
+                            markDirtyMethod.setAccessible(true);
+                            markDirtyMethod.invoke(workspace);
+                        } catch (Exception e) {
+                            LOG.warn("Could not mark workspace as dirty via reflection", e);
+                        }
+                    }
+                } catch (NoSuchFieldException | IllegalAccessException e) {
+                    LOG.error("Failed to access renderType field during save", e);
+                }
+            }
+        });
 
 		addListener(ModifyTemplateResultEvent.class, event -> {
 			if (event.getTemplateName() != null && event.getTemplateName().equals("json/item.json.ftl")) {
@@ -234,8 +267,8 @@ public class Launcher extends JavaPlugin {
 					if (metadataRaw instanceof Map) {
 						@SuppressWarnings("unchecked")
 						Map<String, String> metadata = (Map<String, String>) metadataRaw;
-						if (metadata.containsKey(item.getName())) {
-							String customModelName = metadata.get(item.getName());
+						if (metadata.containsKey(itemName)) {
+							String customModelName = metadata.get(itemName);
 							Model customModel = Model.getModelByParams(workspace, customModelName, Model.Type.JSON);
 
 							if (customModel == null || customModel.getFile() == null) {

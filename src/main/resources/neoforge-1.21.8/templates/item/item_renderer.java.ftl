@@ -100,23 +100,25 @@ package ${package}.client.renderer.item;
 		boolean isFirstPerson = displayContext == ItemDisplayContext.FIRST_PERSON_LEFT_HAND || displayContext == ItemDisplayContext.FIRST_PERSON_RIGHT_HAND;
 		boolean isThirdPerson = displayContext == ItemDisplayContext.THIRD_PERSON_LEFT_HAND || displayContext == ItemDisplayContext.THIRD_PERSON_RIGHT_HAND;
 		/*@perspective*/
-		if (isFirstPerson && Minecraft.getInstance().player != null && (model.root().getChild("left_arm") != null || model.root().getChild("right_arm") != null)) {
-			AbstractClientPlayer player = Minecraft.getInstance().player;
-			PlayerRenderer playerRenderer = (PlayerRenderer) Minecraft.getInstance().getEntityRenderDispatcher().getRenderer(player);
-			PlayerModel playerModel = playerRenderer.getModel();
-			ResourceLocation skinTexture = player.getSkin().texture();
-			ItemArms.renderPartWithArms(model, poseStack, vertexConsumer, bufferSource, packedLight, packedOverlay, playerModel, skinTexture, player.isInvisible());
-		} else {
-			ModelPart leftArm = model.root().getChild("left_arm");
-            ModelPart rightArm = model.root().getChild("right_arm");
-			if (leftArm != null)
-			    leftArm.skipDraw = true;
-			if (rightArm != null) {
-			    rightArm.skipDraw = true;
-			    rightArm.offsetScale(new Vector3f(-rightArm.xScale, -rightArm.yScale, -rightArm.zScale));
-			}
-			model.renderToBuffer(poseStack, vertexConsumer, packedLight, packedOverlay);
-		}
+		try {
+		    if (isFirstPerson && Minecraft.getInstance().player != null && (model.root().getChild("left_arm") != null || model.root().getChild("right_arm") != null)) {
+			    AbstractClientPlayer player = Minecraft.getInstance().player;
+			    PlayerRenderer playerRenderer = (PlayerRenderer) Minecraft.getInstance().getEntityRenderDispatcher().getRenderer(player);
+			    PlayerModel playerModel = playerRenderer.getModel();
+			    ResourceLocation skinTexture = player.getSkin().texture();
+			    ItemArms.renderPartWithArms(model, poseStack, vertexConsumer, bufferSource, packedLight, packedOverlay, playerModel, skinTexture, player.isInvisible());
+		    } else {
+			    ModelPart leftArm = model.root().getChild("left_arm");
+                ModelPart rightArm = model.root().getChild("right_arm");
+			    if (leftArm != null)
+			        leftArm.skipDraw = true;
+			    if (rightArm != null) {
+			        rightArm.skipDraw = true;
+			        rightArm.offsetScale(new Vector3f(-rightArm.xScale, -rightArm.yScale, -rightArm.zScale));
+			    }
+			    model.renderToBuffer(poseStack, vertexConsumer, packedLight, packedOverlay);
+		    }
+		} catch (Exception ignored) {}
 		<#else>
 		VertexConsumer vertexConsumer = ItemRenderer.getFoilBuffer(bufferSource, model.renderType(texture), false, glint);
 		model.setupAnim(renderState);

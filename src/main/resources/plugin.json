@@ -7,7 +7,7 @@
   "javaplugin": "net.nerdypuzzle.betteranimations.Launcher",
   "info": {
     "name": "Nerdy's better animations",
-    "version": "1.0.1",
+    "version": "1.0.3",
     "description": "Improves upon the java animation system for entities and items",
     "author": "NerdyPuzzle"
   }
