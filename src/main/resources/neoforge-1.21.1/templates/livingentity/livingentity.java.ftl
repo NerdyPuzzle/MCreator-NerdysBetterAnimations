@@ -177,7 +177,7 @@ public class ${name}Entity extends ${extendsClass} <#if interfaces?size gt 0>imp
 		refreshDimensions();
 		</#if>
 	}
-	
+
 	<#if data.animations?size != 0>
 	@Override
 	public void onSyncedDataUpdated(EntityDataAccessor<?> data) {
@@ -207,13 +207,11 @@ public class ${name}Entity extends ${extendsClass} <#if interfaces?size gt 0>imp
 		super.defineSynchedData(builder);
 		builder.define(TEXTURE, "${data.mobModelTexture?replace(".png", "")}");
 		builder.define(ANIM, 0);
-		<#if data.entityDataEntries?has_content>
-			<#list data.entityDataEntries as entry>
-				builder.define(DATA_${entry.property().getName()}, ${entry.value()?is_string?then("\"" + entry.value() + "\"", entry.value())});
-			</#list>
-		</#if>
+		<#list data.entityDataEntries as entry>
+			builder.define(DATA_${entry.property().getName()}, ${entry.value()?is_string?then("\"" + JavaConventions.escapeStringForJava(entry.value()) + "\"", entry.value())});
+		</#list>
 	}
-	
+
 	public void setTexture(String texture) {
 		this.entityData.set(TEXTURE, texture);
 	}
@@ -442,12 +440,6 @@ public class ${name}Entity extends ${extendsClass} <#if interfaces?size gt 0>imp
 	}
 	</#if>
 
-	<#if data.immuneToFire>
-	@Override public boolean fireImmune() {
-		return true;
-	}
-	</#if>
-
 	<#if hasProcedure(data.whenMobDies)>
 	@Override public void die(DamageSource source) {
 		super.die(source);
@@ -508,17 +500,15 @@ public class ${name}Entity extends ${extendsClass} <#if interfaces?size gt 0>imp
 	@Override public void addAdditionalSaveData(CompoundTag compound) {
 		super.addAdditionalSaveData(compound);
 		compound.putString("Texture", this.getTexture());
-		<#if data.entityDataEntries?has_content>
-			<#list data.entityDataEntries as entry>
-				<#if entry.value().getClass().getSimpleName() == "Integer">
-				compound.putInt("Data${entry.property().getName()}", this.entityData.get(DATA_${entry.property().getName()}));
-				<#elseif entry.value().getClass().getSimpleName() == "Boolean">
-				compound.putBoolean("Data${entry.property().getName()}", this.entityData.get(DATA_${entry.property().getName()}));
-				<#elseif entry.value().getClass().getSimpleName() == "String">
-				compound.putString("Data${entry.property().getName()}", this.entityData.get(DATA_${entry.property().getName()}));
-				</#if>
-			</#list>
-		</#if>
+		<#list data.entityDataEntries as entry>
+			<#if entry.value().getClass().getSimpleName() == "Integer">
+			compound.putInt("Data${entry.property().getName()}", this.entityData.get(DATA_${entry.property().getName()}));
+			<#elseif entry.value().getClass().getSimpleName() == "Boolean">
+			compound.putBoolean("Data${entry.property().getName()}", this.entityData.get(DATA_${entry.property().getName()}));
+			<#elseif entry.value().getClass().getSimpleName() == "String">
+			compound.putString("Data${entry.property().getName()}", this.entityData.get(DATA_${entry.property().getName()}));
+			</#if>
+		</#list>
 		<#if data.guiBoundTo?has_content>
 		compound.put("InventoryCustom", inventory.serializeNBT(this.registryAccess()));
 		</#if>
@@ -532,19 +522,17 @@ public class ${name}Entity extends ${extendsClass} <#if interfaces?size gt 0>imp
 	@Override public void readAdditionalSaveData(CompoundTag compound) {
 		super.readAdditionalSaveData(compound);
 		if (compound.contains("Texture"))
-		    this.setTexture(compound.getString("Texture"));
-		<#if data.entityDataEntries?has_content>
-			<#list data.entityDataEntries as entry>
-				if (compound.contains("Data${entry.property().getName()}"))
-					<#if entry.value().getClass().getSimpleName() == "Integer">
-					this.entityData.set(DATA_${entry.property().getName()}, compound.getInt("Data${entry.property().getName()}"));
-					<#elseif entry.value().getClass().getSimpleName() == "Boolean">
-					this.entityData.set(DATA_${entry.property().getName()}, compound.getBoolean("Data${entry.property().getName()}"));
-					<#elseif entry.value().getClass().getSimpleName() == "String">
-					this.entityData.set(DATA_${entry.property().getName()}, compound.getString("Data${entry.property().getName()}"));
-					</#if>
-			</#list>
-		</#if>
+            this.setTexture(compound.getString("Texture"));
+		<#list data.entityDataEntries as entry>
+			if (compound.contains("Data${entry.property().getName()}"))
+				<#if entry.value().getClass().getSimpleName() == "Integer">
+				this.entityData.set(DATA_${entry.property().getName()}, compound.getInt("Data${entry.property().getName()}"));
+				<#elseif entry.value().getClass().getSimpleName() == "Boolean">
+				this.entityData.set(DATA_${entry.property().getName()}, compound.getBoolean("Data${entry.property().getName()}"));
+				<#elseif entry.value().getClass().getSimpleName() == "String">
+				this.entityData.set(DATA_${entry.property().getName()}, compound.getString("Data${entry.property().getName()}"));
+				</#if>
+		</#list>
 		<#if data.guiBoundTo?has_content>
 		if (compound.get("InventoryCustom") instanceof CompoundTag inventoryTag)
 			inventory.deserializeNBT(this.registryAccess(), inventoryTag);
@@ -784,7 +772,19 @@ public class ${name}Entity extends ${extendsClass} <#if interfaces?size gt 0>imp
 		}
     </#if>
 
-	<#if data.breedable>
+	<#if ["Pig", "Villager", "Wolf", "Cow", "Chicken", "Ocelot", "Squid", "Horse"]?seq_contains(extendsClass)>
+		@Override public ${extendsClass} getBreedOffspring(ServerLevel serverWorld, AgeableMob ageable) {
+			${name}Entity retval = ${JavaModName}Entities.${REGISTRYNAME}.get().create(serverWorld);
+			<#if data.aiBase == "Wolf">
+			if (this.isTame()) {
+				retval.setOwnerUUID(this.getOwnerUUID());
+				retval.setTame(true, true);
+			}
+			</#if>
+			retval.finalizeSpawn(serverWorld, serverWorld.getCurrentDifficultyAt(retval.blockPosition()), MobSpawnType.BREEDING, null);
+			return retval;
+		}
+	<#elseif data.breedable>
         @Override public AgeableMob getBreedOffspring(ServerLevel serverWorld, AgeableMob ageable) {
 			${name}Entity retval = ${JavaModName}Entities.${REGISTRYNAME}.get().create(serverWorld);
 			retval.finalizeSpawn(serverWorld, serverWorld.getCurrentDifficultyAt(retval.blockPosition()), MobSpawnType.BREEDING, null);
@@ -792,7 +792,11 @@ public class ${name}Entity extends ${extendsClass} <#if interfaces?size gt 0>imp
 		}
 
 		@Override public boolean isFood(ItemStack stack) {
+			<#if data.breedTriggerItems?has_content>
 			return ${mappedMCItemsToIngredient(data.breedTriggerItems)}.test(stack);
+			<#else>
+			return false;
+			</#if>
 		}
     </#if>
 
@@ -872,7 +876,7 @@ public class ${name}Entity extends ${extendsClass} <#if interfaces?size gt 0>imp
 	}
 	</#if>
 
-    <#if data.ridable && (data.canControlForward || data.canControlStrafe)>
+    <#if data.ridable && (data.canControlForward || data.canControlStrafe) || data.flyingMob>
         @Override public void travel(Vec3 dir) {
         	<#if data.canControlForward || data.canControlStrafe>
 			Entity entity = this.getPassengers().isEmpty() ? null : (Entity) this.getPassengers().get(0);
@@ -899,7 +903,11 @@ public class ${name}Entity extends ${extendsClass} <#if interfaces?size gt 0>imp
 						float strafe = 0;
 					</#if>
 
+					<#if data.flyingMob>
+					this.travelFlying(new Vec3(strafe, 0, forward));
+					<#else>
 					super.travel(new Vec3(strafe, 0, forward));
+					</#if>
 				}
 
 				double d1 = this.getX() - this.xo;
@@ -913,8 +921,30 @@ public class ${name}Entity extends ${extendsClass} <#if interfaces?size gt 0>imp
 			}
 			</#if>
 
+			<#if data.flyingMob>
+			this.travelFlying(dir);
+			<#else>
 			super.travel(dir);
+			</#if>
 		}
+
+		<#if data.flyingMob>
+		private void travelFlying(Vec3 dir) {
+			if (this.isInWater()) {
+				this.moveRelative(0.02F, dir);
+				this.move(MoverType.SELF, this.getDeltaMovement());
+				this.setDeltaMovement(this.getDeltaMovement().scale(0.8));
+			} else if (this.isInLava()) {
+				this.moveRelative(0.02F, dir);
+				this.move(MoverType.SELF, this.getDeltaMovement());
+				this.setDeltaMovement(this.getDeltaMovement().scale(0.5));
+			} else {
+				this.moveRelative((float) this.getAttributeValue(Attributes.FLYING_SPEED), dir);
+				this.move(MoverType.SELF, this.getDeltaMovement());
+				this.setDeltaMovement(this.getDeltaMovement().scale(0.91));
+			}
+		}
+		</#if>
     </#if>
 
 	<#if hasProcedure(data.boundingBoxScale) || (data.boundingBoxScale?? && data.boundingBoxScale.getFixedValue() != 1)>
@@ -1090,7 +1120,7 @@ public class ${name}Entity extends ${extendsClass} <#if interfaces?size gt 0>imp
 
 		<#if data.vibrationalEvents?has_content>
 		@Override public TagKey<GameEvent> getListenableEvents() {
-			return TagKey.create(Registries.GAME_EVENT, ResourceLocation.withDefaultNamespace("${data.getModElement().getRegistryName()}_can_listen"));
+			return TagKey.create(Registries.GAME_EVENT, ResourceLocation.withDefaultNamespace("${registryname}_can_listen"));
 		}
 		</#if>
 

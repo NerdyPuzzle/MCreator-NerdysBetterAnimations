@@ -64,7 +64,7 @@ public class ${name}Entity extends ${extendsClass} <#if interfaces?size gt 0>imp
 		${JavaModName}Entities.${REGISTRYNAME}, new int[] {0, ${data.raidSpawnsCount[0]}, ${data.raidSpawnsCount[1]}, ${data.raidSpawnsCount[2]}, ${data.raidSpawnsCount[3]}, ${data.raidSpawnsCount[4]}, ${data.raidSpawnsCount[5]}, ${data.raidSpawnsCount[6]}}
 	);
 	</#if>
-	
+
 	public static final EntityDataAccessor<String> TEXTURE = SynchedEntityData.defineId(${name}Entity.class, EntityDataSerializers.STRING);
 	public static final EntityDataAccessor<Integer> ANIM = SynchedEntityData.defineId(${name}Entity.class, EntityDataSerializers.INT);
 
@@ -98,37 +98,37 @@ public class ${name}Entity extends ${extendsClass} <#if interfaces?size gt 0>imp
 	</#if>
 
 	public ${name}Entity(EntityType<${name}Entity> type, Level world) {
-    	super(type, world);
+		super(type, world);
 		xpReward = ${data.xpAmount};
 		setNoAi(${(!data.hasAI)});
 
 		<#if data.mobLabel?has_content>
-        	setCustomName(Component.literal("${data.mobLabel}"));
-        	setCustomNameVisible(true);
-        </#if>
+			setCustomName(Component.literal("${data.mobLabel}"));
+			setCustomNameVisible(true);
+		</#if>
 
 		<#if !data.doesDespawnWhenIdle>
 			setPersistenceRequired();
-        </#if>
+		</#if>
 
 		<#if !data.equipmentMainHand.isEmpty()>
-        this.setItemSlot(EquipmentSlot.MAINHAND, ${mappedMCItemToItemStackCode(data.equipmentMainHand, 1)});
-        </#if>
-        <#if !data.equipmentOffHand.isEmpty()>
-        this.setItemSlot(EquipmentSlot.OFFHAND, ${mappedMCItemToItemStackCode(data.equipmentOffHand, 1)});
-        </#if>
-        <#if !data.equipmentHelmet.isEmpty()>
-        this.setItemSlot(EquipmentSlot.HEAD, ${mappedMCItemToItemStackCode(data.equipmentHelmet, 1)});
-        </#if>
-        <#if !data.equipmentBody.isEmpty()>
-        this.setItemSlot(EquipmentSlot.CHEST, ${mappedMCItemToItemStackCode(data.equipmentBody, 1)});
-        </#if>
-        <#if !data.equipmentLeggings.isEmpty()>
-        this.setItemSlot(EquipmentSlot.LEGS, ${mappedMCItemToItemStackCode(data.equipmentLeggings, 1)});
-        </#if>
-        <#if !data.equipmentBoots.isEmpty()>
-        this.setItemSlot(EquipmentSlot.FEET, ${mappedMCItemToItemStackCode(data.equipmentBoots, 1)});
-        </#if>
+		this.setItemSlot(EquipmentSlot.MAINHAND, ${mappedMCItemToItemStackCode(data.equipmentMainHand, 1)});
+		</#if>
+		<#if !data.equipmentOffHand.isEmpty()>
+		this.setItemSlot(EquipmentSlot.OFFHAND, ${mappedMCItemToItemStackCode(data.equipmentOffHand, 1)});
+		</#if>
+		<#if !data.equipmentHelmet.isEmpty()>
+		this.setItemSlot(EquipmentSlot.HEAD, ${mappedMCItemToItemStackCode(data.equipmentHelmet, 1)});
+		</#if>
+		<#if !data.equipmentBody.isEmpty()>
+		this.setItemSlot(EquipmentSlot.CHEST, ${mappedMCItemToItemStackCode(data.equipmentBody, 1)});
+		</#if>
+		<#if !data.equipmentLeggings.isEmpty()>
+		this.setItemSlot(EquipmentSlot.LEGS, ${mappedMCItemToItemStackCode(data.equipmentLeggings, 1)});
+		</#if>
+		<#if !data.equipmentBoots.isEmpty()>
+		this.setItemSlot(EquipmentSlot.FEET, ${mappedMCItemToItemStackCode(data.equipmentBoots, 1)});
+		</#if>
 
 		<#if data.flyingMob>
 		this.moveControl = new FlyingMoveControl(this, 10, true);
@@ -136,8 +136,8 @@ public class ${name}Entity extends ${extendsClass} <#if interfaces?size gt 0>imp
 		this.setPathfindingMalus(PathType.WATER, 0);
 		this.moveControl = new MoveControl(this) {
 			@Override public void tick() {
-			    if (${name}Entity.this.isInWater())
-                    ${name}Entity.this.setDeltaMovement(${name}Entity.this.getDeltaMovement().add(0, 0.005, 0));
+				if (${name}Entity.this.isInWater())
+					${name}Entity.this.setDeltaMovement(${name}Entity.this.getDeltaMovement().add(0, 0.005, 0));
 
 				if (this.operation == MoveControl.Operation.MOVE_TO && !${name}Entity.this.getNavigation().isDone()) {
 					double dx = this.wantedX - ${name}Entity.this.getX();
@@ -177,7 +177,7 @@ public class ${name}Entity extends ${extendsClass} <#if interfaces?size gt 0>imp
 		refreshDimensions();
 		</#if>
 	}
-	
+
 	<#if data.animations?size != 0>
 	@Override
 	public void onSyncedDataUpdated(EntityDataAccessor<?> data) {
@@ -211,7 +211,7 @@ public class ${name}Entity extends ${extendsClass} <#if interfaces?size gt 0>imp
 			builder.define(DATA_${entry.property().getName()}, ${entry.value()?is_string?then("\"" + JavaConventions.escapeStringForJava(entry.value()) + "\"", entry.value())});
 		</#list>
 	}
-	
+
 	public void setTexture(String texture) {
 		this.entityData.set(TEXTURE, texture);
 	}
@@ -248,13 +248,13 @@ public class ${name}Entity extends ${extendsClass} <#if interfaces?size gt 0>imp
 			${aicode}
 		</#if>
 
-        <#if data.ranged>
-            this.goalSelector.addGoal(1, new RangedAttackGoal(this, 1.25, ${data.rangedAttackInterval}, ${data.rangedAttackRadius}f) {
+		<#if data.ranged>
+			this.goalSelector.addGoal(1, new RangedAttackGoal(this, 1.25, ${data.rangedAttackInterval}, ${data.rangedAttackRadius}f) {
 				@Override public boolean canContinueToUse() {
 					return this.canUse();
 				}
 			});
-        </#if>
+		</#if>
 	}
 	</#if>
 
@@ -264,7 +264,7 @@ public class ${name}Entity extends ${extendsClass} <#if interfaces?size gt 0>imp
 	@Override public boolean removeWhenFarAway(double distanceToClosestPlayer) {
 		return false;
 	}
-    </#if>
+	</#if>
 
 	<#if data.mobModelName == "Biped">
 	@Override public Vec3 getPassengerRidingPosition(Entity entity) {
@@ -283,19 +283,19 @@ public class ${name}Entity extends ${extendsClass} <#if interfaces?size gt 0>imp
 	</#if>
 
 	<#if !data.mobDrop.isEmpty()>
-    protected void dropCustomDeathLoot(ServerLevel serverLevel, DamageSource source, boolean recentlyHitIn) {
-        super.dropCustomDeathLoot(serverLevel, source, recentlyHitIn);
-        this.spawnAtLocation(serverLevel, ${mappedMCItemToItemStackCode(data.mobDrop, 1)});
-   	}
+	protected void dropCustomDeathLoot(ServerLevel serverLevel, DamageSource source, boolean recentlyHitIn) {
+		super.dropCustomDeathLoot(serverLevel, source, recentlyHitIn);
+		this.spawnAtLocation(serverLevel, ${mappedMCItemToItemStackCode(data.mobDrop, 1)});
+	}
 	</#if>
 
-   	<#if data.livingSound?has_content && data.livingSound.getMappedValue()?has_content>
+	<#if data.livingSound?has_content && data.livingSound.getMappedValue()?has_content>
 	@Override public SoundEvent getAmbientSound() {
 		return BuiltInRegistries.SOUND_EVENT.getValue(ResourceLocation.parse("${data.livingSound}"));
 	}
 	</#if>
 
-   	<#if data.stepSound?has_content && data.stepSound.getMappedValue()?has_content>
+	<#if data.stepSound?has_content && data.stepSound.getMappedValue()?has_content>
 	@Override public void playStepSound(BlockPos pos, BlockState blockIn) {
 		this.playSound(BuiltInRegistries.SOUND_EVENT.getValue(ResourceLocation.parse("${data.stepSound}")), 0.15f, 1);
 	}
@@ -334,7 +334,7 @@ public class ${name}Entity extends ${extendsClass} <#if interfaces?size gt 0>imp
 			"world": "this.level()"
 		}/>
 	}
-    </#if>
+	</#if>
 
 	<#if hasProcedure(data.whenMobFalls) || data.flyingMob>
 	@Override public boolean causeFallDamage(double l, float d, DamageSource source) {
@@ -355,7 +355,7 @@ public class ${name}Entity extends ${extendsClass} <#if interfaces?size gt 0>imp
 			return super.causeFallDamage(l, d, source);
 		</#if>
 	}
-    </#if>
+	</#if>
 
 	<#if hasProcedure(data.whenMobIsHurt) || data.immuneToFire || data.immuneToArrows || data.immuneToFallDamage
 		|| data.immuneToCactus || data.immuneToDrowning || data.immuneToLightning || data.immuneToPotions
@@ -432,7 +432,7 @@ public class ${name}Entity extends ${extendsClass} <#if interfaces?size gt 0>imp
 		</#if>
 		return super.hurtServer(level, damagesource, amount);
 	}
-    </#if>
+	</#if>
 
 	<#if data.immuneToExplosion>
 	@Override public boolean ignoreExplosion(Explosion explosion) {
@@ -454,7 +454,7 @@ public class ${name}Entity extends ${extendsClass} <#if interfaces?size gt 0>imp
 			"damagesource": "source"
 		}/>
 	}
-    </#if>
+	</#if>
 
 	<#if hasProcedure(data.onInitialSpawn)>
 	@Override public SpawnGroupData finalizeSpawn(ServerLevelAccessor world, DifficultyInstance difficulty, EntitySpawnReason reason, @Nullable SpawnGroupData livingdata) {
@@ -468,7 +468,7 @@ public class ${name}Entity extends ${extendsClass} <#if interfaces?size gt 0>imp
 		}/>
 		return retval;
 	}
-    </#if>
+	</#if>
 
 	<#if data.guiBoundTo?has_content>
 	private final ItemStackHandler inventory = new ItemStackHandler(${data.inventorySize})
@@ -486,7 +486,7 @@ public class ${name}Entity extends ${extendsClass} <#if interfaces?size gt 0>imp
 		return combined;
 	}
 
-   	@Override protected void dropEquipment(ServerLevel serverLevel) {
+	@Override protected void dropEquipment(ServerLevel serverLevel) {
 		super.dropEquipment(serverLevel);
 		for (int i = 0; i < inventory.getSlots(); ++i) {
 			ItemStack itemstack = inventory.getStackInSlot(i);
@@ -500,17 +500,15 @@ public class ${name}Entity extends ${extendsClass} <#if interfaces?size gt 0>imp
 	@Override public void addAdditionalSaveData(ValueOutput valueOutput) {
 		super.addAdditionalSaveData(valueOutput);
 		valueOutput.putString("Texture", this.getTexture());
-		<#if data.entityDataEntries?has_content>
-			<#list data.entityDataEntries as entry>
-				<#if entry.value().getClass().getSimpleName() == "Integer">
-				valueOutput.putInt("Data${entry.property().getName()}", this.entityData.get(DATA_${entry.property().getName()}));
-				<#elseif entry.value().getClass().getSimpleName() == "Boolean">
-				valueOutput.putBoolean("Data${entry.property().getName()}", this.entityData.get(DATA_${entry.property().getName()}));
-				<#elseif entry.value().getClass().getSimpleName() == "String">
-				valueOutput.putString("Data${entry.property().getName()}", this.entityData.get(DATA_${entry.property().getName()}));
-				</#if>
-			</#list>
-		</#if>
+		<#list data.entityDataEntries as entry>
+			<#if entry.value().getClass().getSimpleName() == "Integer">
+			valueOutput.putInt("Data${entry.property().getName()}", this.entityData.get(DATA_${entry.property().getName()}));
+			<#elseif entry.value().getClass().getSimpleName() == "Boolean">
+			valueOutput.putBoolean("Data${entry.property().getName()}", this.entityData.get(DATA_${entry.property().getName()}));
+			<#elseif entry.value().getClass().getSimpleName() == "String">
+			valueOutput.putString("Data${entry.property().getName()}", this.entityData.get(DATA_${entry.property().getName()}));
+			</#if>
+		</#list>
 		<#if data.guiBoundTo?has_content>
 		inventory.serialize(valueOutput.child("InventoryCustom"));
 		</#if>
@@ -522,17 +520,15 @@ public class ${name}Entity extends ${extendsClass} <#if interfaces?size gt 0>imp
 	@Override public void readAdditionalSaveData(ValueInput valueInput) {
 		super.readAdditionalSaveData(valueInput);
 		this.setTexture(valueInput.getStringOr("Texture", "${data.mobModelTexture?replace(".png", "")}"));
-		<#if data.entityDataEntries?has_content>
-			<#list data.entityDataEntries as entry>
-				<#if entry.value().getClass().getSimpleName() == "Integer">
-				this.entityData.set(DATA_${entry.property().getName()}, valueInput.getIntOr("Data${entry.property().getName()}", 0));
-				<#elseif entry.value().getClass().getSimpleName() == "Boolean">
-				this.entityData.set(DATA_${entry.property().getName()}, valueInput.getBooleanOr("Data${entry.property().getName()}", false));
-				<#elseif entry.value().getClass().getSimpleName() == "String">
-				this.entityData.set(DATA_${entry.property().getName()}, valueInput.getStringOr("Data${entry.property().getName()}", ""));
-				</#if>
-			</#list>
-		</#if>
+		<#list data.entityDataEntries as entry>
+			<#if entry.value().getClass().getSimpleName() == "Integer">
+			this.entityData.set(DATA_${entry.property().getName()}, valueInput.getIntOr("Data${entry.property().getName()}", 0));
+			<#elseif entry.value().getClass().getSimpleName() == "Boolean">
+			this.entityData.set(DATA_${entry.property().getName()}, valueInput.getBooleanOr("Data${entry.property().getName()}", false));
+			<#elseif entry.value().getClass().getSimpleName() == "String">
+			this.entityData.set(DATA_${entry.property().getName()}, valueInput.getStringOr("Data${entry.property().getName()}", ""));
+			</#if>
+		</#list>
 		<#if data.guiBoundTo?has_content>
 		valueInput.child("InventoryCustom").ifPresent(input -> inventory.deserialize(input));
 		</#if>
@@ -640,7 +636,7 @@ public class ${name}Entity extends ${extendsClass} <#if interfaces?size gt 0>imp
 
 		<#if data.ridable>
 		sourceentity.startRiding(this);
-	    </#if>
+		</#if>
 
 		<#if hasProcedure(data.onRightClickedOn)>
 			double x = this.getX();
@@ -658,7 +654,7 @@ public class ${name}Entity extends ${extendsClass} <#if interfaces?size gt 0>imp
 			return retval;
 		</#if>
 	}
-    </#if>
+	</#if>
 
 	<#if hasProcedure(data.whenThisMobKillsAnother)>
 	@Override public void awardKillScore(Entity entity, DamageSource damageSource) {
@@ -674,7 +670,7 @@ public class ${name}Entity extends ${extendsClass} <#if interfaces?size gt 0>imp
 			"damagesource": "damageSource"
 		}/>
 	}
-    </#if>
+	</#if>
 
 	<#if hasPlayableAnimations || data.sensitiveToVibration>
 	@Override public void tick() {
@@ -732,7 +728,7 @@ public class ${name}Entity extends ${extendsClass} <#if interfaces?size gt 0>imp
 			this.refreshDimensions();
 		</#if>
 	}
-    </#if>
+	</#if>
 
 	<#if hasProcedure(data.onPlayerCollidesWith)>
 	@Override public void playerTouch(Player sourceentity) {
@@ -746,10 +742,10 @@ public class ${name}Entity extends ${extendsClass} <#if interfaces?size gt 0>imp
 			"world": "this.level()"
 		}/>
 	}
-    </#if>
+	</#if>
 
-    <#if data.ranged>
-	    @Override public void performRangedAttack(LivingEntity target, float flval) {
+	<#if data.ranged>
+		@Override public void performRangedAttack(LivingEntity target, float flval) {
 			<#if data.rangedItemType == "Default item">
 				<#if !data.rangedAttackItem.isEmpty()>
 				${name}EntityProjectile entityarrow = new ${name}EntityProjectile(${JavaModName}Entities.${REGISTRYNAME}_PROJECTILE.get(), this, this.level());
@@ -765,19 +761,35 @@ public class ${name}Entity extends ${extendsClass} <#if interfaces?size gt 0>imp
 				${data.rangedItemType}Entity.shoot(this, target);
 			</#if>
 		}
-    </#if>
+	</#if>
 
-	<#if data.breedable>
-        @Override public AgeableMob getBreedOffspring(ServerLevel serverWorld, AgeableMob ageable) {
+	<#if ["Pig", "Villager", "Wolf", "Cow", "Chicken", "Ocelot", "Squid", "Horse"]?seq_contains(extendsClass)>
+		@Override public ${extendsClass} getBreedOffspring(ServerLevel serverWorld, AgeableMob ageable) {
+			${name}Entity retval = ${JavaModName}Entities.${REGISTRYNAME}.get().create(serverWorld, EntitySpawnReason.BREEDING);
+			<#if data.aiBase == "Wolf">
+			if (this.isTame()) {
+				retval.setOwnerReference(this.getOwnerReference());
+				retval.setTame(true, true);
+			}
+			</#if>
+			retval.finalizeSpawn(serverWorld, serverWorld.getCurrentDifficultyAt(retval.blockPosition()), EntitySpawnReason.BREEDING, null);
+			return retval;
+		}
+	<#elseif data.breedable>
+		@Override public AgeableMob getBreedOffspring(ServerLevel serverWorld, AgeableMob ageable) {
 			${name}Entity retval = ${JavaModName}Entities.${REGISTRYNAME}.get().create(serverWorld, EntitySpawnReason.BREEDING);
 			retval.finalizeSpawn(serverWorld, serverWorld.getCurrentDifficultyAt(retval.blockPosition()), EntitySpawnReason.BREEDING, null);
 			return retval;
 		}
 
 		@Override public boolean isFood(ItemStack stack) {
+			<#if data.breedTriggerItems?has_content>
 			return ${mappedMCItemsToIngredient(data.breedTriggerItems)}.test(stack);
+			<#else>
+			return false;
+			</#if>
 		}
-    </#if>
+	</#if>
 
 	<#if data.waterMob>
 	@Override public boolean checkSpawnObstruction(LevelReader world) {
@@ -812,11 +824,11 @@ public class ${name}Entity extends ${extendsClass} <#if interfaces?size gt 0>imp
 		return false;
 	}
 
-   	@Override protected void doPush(Entity entityIn) {
-   	}
+	@Override protected void doPush(Entity entityIn) {
+	}
 
-   	@Override protected void pushEntities() {
-   	}
+	@Override protected void pushEntities() {
+	}
 	</#if>
 
 	<#if data.solidBoundingBox?? && (hasProcedure(data.solidBoundingBox) || data.solidBoundingBox.getFixedValue())>
@@ -855,9 +867,9 @@ public class ${name}Entity extends ${extendsClass} <#if interfaces?size gt 0>imp
 	}
 	</#if>
 
-    <#if data.ridable && (data.canControlForward || data.canControlStrafe)>
-        @Override public void travel(Vec3 dir) {
-        	<#if data.canControlForward || data.canControlStrafe>
+	<#if data.ridable && (data.canControlForward || data.canControlStrafe) || data.flyingMob>
+		@Override public void travel(Vec3 dir) {
+			<#if data.canControlForward || data.canControlStrafe>
 			Entity entity = this.getPassengers().isEmpty() ? null : (Entity) this.getPassengers().get(0);
 			if (this.isVehicle()) {
 				this.setYRot(entity.getYRot());
@@ -882,7 +894,11 @@ public class ${name}Entity extends ${extendsClass} <#if interfaces?size gt 0>imp
 						float strafe = 0;
 					</#if>
 
+					<#if data.flyingMob>
+					this.travelFlying(new Vec3(strafe, 0, forward), (float) this.getAttributeValue(Attributes.FLYING_SPEED));
+					<#else>
 					super.travel(new Vec3(strafe, 0, forward));
+					</#if>
 				}
 
 				double d1 = this.getX() - this.xo;
@@ -896,9 +912,13 @@ public class ${name}Entity extends ${extendsClass} <#if interfaces?size gt 0>imp
 			}
 			</#if>
 
+			<#if data.flyingMob>
+			this.travelFlying(dir, (float) this.getAttributeValue(Attributes.FLYING_SPEED));
+			<#else>
 			super.travel(dir);
+			</#if>
 		}
-    </#if>
+	</#if>
 
 	<#if hasProcedure(data.boundingBoxScale) || (data.boundingBoxScale?? && data.boundingBoxScale.getFixedValue() != 1)>
 	@Override public EntityDimensions getDefaultDimensions(Pose pose) {
@@ -917,20 +937,20 @@ public class ${name}Entity extends ${extendsClass} <#if interfaces?size gt 0>imp
 
 	<#if data.flyingMob>
 	@Override protected void checkFallDamage(double y, boolean onGroundIn, BlockState state, BlockPos pos) {
-   	}
+	}
 
-   	@Override public void setNoGravity(boolean ignored) {
+	@Override public void setNoGravity(boolean ignored) {
 		super.setNoGravity(true);
 	}
-    </#if>
+	</#if>
 
-    <#if data.flyingMob>
-    public void aiStep() {
+	<#if data.flyingMob>
+	public void aiStep() {
 		super.aiStep();
 
 		this.setNoGravity(true);
 	}
-    </#if>
+	</#if>
 
 	public static void init(RegisterSpawnPlacementsEvent event) {
 		<#if data.spawnThisMob>

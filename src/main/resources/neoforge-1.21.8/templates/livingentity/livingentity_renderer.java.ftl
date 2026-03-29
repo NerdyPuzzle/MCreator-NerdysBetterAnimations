@@ -110,16 +110,18 @@ package ${package}.client.renderer;
 	<#assign stateForAnimations = "EntityRenderState">
 </#if>
 
-<#compress>
+<@javacompress>
 public class ${name}Renderer extends <#if humanoid>Humanoid</#if>MobRenderer<${name}Entity, ${renderState}, ${model}> {
 
 	<#-- This entity reference is shared for all entities as renderer only has one instance.
-	     This currently works, but is somewhat hacky. It works because all methods requiring it
-	     are called after extractRenderState where this entity is assigned to the current entity.
-	     On the other hand, vanilla code reuses state for all entities too, so it may be fine.
-	     If we need to change this, we can use RegisterRenderStateModifiersEvent and
-	     and IRenderStateExtension#setRenderData with custom ContextKey-->
+		 This currently works, but is somewhat hacky. It works because all methods requiring it
+		 are called after extractRenderState where this entity is assigned to the current entity.
+		 On the other hand, vanilla code reuses state for all entities too, so it may be fine.
+		 If we need to change this, we can use RegisterRenderStateModifiersEvent and
+		 and IRenderStateExtension#setRenderData with custom ContextKey-->
 	private ${name}Entity entity = null;
+
+	private final ResourceLocation entityTexture = ResourceLocation.parse("${modid}:textures/entities/${data.mobModelTexture}");
 
 	public ${name}Renderer(EntityRendererProvider.Context context) {
 		super(context, new <#if data.animations?has_content>AnimatedModel<#else>${model}</#if>(${rootPart}), ${data.modelShadowSize}f);
@@ -135,7 +137,7 @@ public class ${name}Renderer extends <#if humanoid>Humanoid</#if>MobRenderer<${n
 		this.addLayer(new RenderLayer<>(this) {
 			final ResourceLocation LAYER_TEXTURE = ResourceLocation.parse("${modid}:textures/entities/${layer.texture}");
 
-			<#compress>
+			<@javacompress>
 			@Override public void render(PoseStack poseStack, MultiBufferSource bufferSource, int light, ${renderState} state, float headYaw, float headPitch) {
 				<#if hasProcedure(layer.condition)>
 				Level world = entity.level();
@@ -158,7 +160,7 @@ public class ${name}Renderer extends <#if humanoid>Humanoid</#if>MobRenderer<${n
 
 				<#if hasProcedure(layer.condition)>}</#if>
 			}
-			</#compress>
+			</@javacompress>
 		});
 		</#list>
 	}
@@ -183,9 +185,9 @@ public class ${name}Renderer extends <#if humanoid>Humanoid</#if>MobRenderer<${n
 	}
 
 	@Override public ResourceLocation getTextureLocation(${renderState} state) {
-		if (entity != null)
+		if (entity != null && entity.getTexture() != "${data.mobModelTexture?replace(".png", "")}")
 			return ResourceLocation.parse("${modid}:textures/entities/" + entity.getTexture() + ".png");
-		return ResourceLocation.parse("${modid}:textures/entities/${data.mobModelTexture}");
+		return entityTexture;
 	}
 
 	<#if data.mobModelName == "Villager" || data.breedable || (data.visualScale?? && (data.visualScale.getFixedValue() != 1 || hasProcedure(data.visualScale)))>
@@ -245,8 +247,18 @@ public class ${name}Renderer extends <#if humanoid>Humanoid</#if>MobRenderer<${n
 		public AnimatedModel(ModelPart root) {
 			super(root);
 			<#list data.animations as animation>
-			this.keyframeAnimation${animation?index} = ${animation.animation}.bake(root);
+			this.keyframeAnimation${animation?index} = safeBake(${animation.animation});
 			</#list>
+		}
+
+		<#-- ideally we would not do this, but many users use animations that animate parts
+			 that don't exist in their model and then complain the game is crashing -->
+		private KeyframeAnimation safeBake(AnimationDefinition source) {
+			try {
+				return source.bake(root);
+			} catch (IllegalArgumentException e) {
+				return new AnimationDefinition(0, false, Map.of()).bake(root);
+			}
 		}
 
 		public void setEntity(${name}Entity entity) {
@@ -275,7 +287,7 @@ public class ${name}Renderer extends <#if humanoid>Humanoid</#if>MobRenderer<${n
 	</#if>
 
 }
-</#compress>
+</@javacompress>
 
 <#macro setupAnim>
 	<#if !humanoid> <#-- HumanoidModel resets its pose in its setupAnim which is called before this one for this special case -->

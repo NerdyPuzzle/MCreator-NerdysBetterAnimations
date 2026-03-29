@@ -54,6 +54,9 @@ public class ${name}Item extends Item {
 				.stacksTo(1)
 				<#elseif data.damageCount != 0>
 				.durability(${data.damageCount})
+					<#if data.repairItems?has_content>
+					.repairable(TagKey.create(Registries.ITEM, ResourceLocation.parse("${modid}:${registryname}_repair_items")))
+					</#if>
 				<#elseif data.stackSize != 64>
 				.stacksTo(${data.stackSize})
 				</#if>
@@ -89,12 +92,19 @@ public class ${name}Item extends Item {
 				<#if data.hasEatResultItem() && !data.hasCustomEatResultItem()>
 				.usingConvertsTo(${mappedMCItemToItem(data.eatResultItem)})
 				</#if>
-				<#if data.enableMeleeDamage>
+				<#if data.enableMeleeDamage || (data.attributeModifiers?size gt 0)>
 				.attributes(ItemAttributeModifiers.builder()
+					<#if data.enableMeleeDamage>
 					.add(Attributes.ATTACK_DAMAGE, new AttributeModifier(BASE_ATTACK_DAMAGE_ID, ${data.damageVsEntity - 1},
 							AttributeModifier.Operation.ADD_VALUE), EquipmentSlotGroup.MAINHAND)
-					.add(Attributes.ATTACK_SPEED, new AttributeModifier(BASE_ATTACK_SPEED_ID, -2.4,
+					.add(Attributes.ATTACK_SPEED, new AttributeModifier(BASE_ATTACK_SPEED_ID, ${data.attackSpeed - 4},
 							AttributeModifier.Operation.ADD_VALUE), EquipmentSlotGroup.MAINHAND)
+					</#if>
+					<#list data.attributeModifiers as modifier>
+					.add(${modifier.attribute}, new AttributeModifier(
+							ResourceLocation.fromNamespaceAndPath(${JavaModName}.MODID, "${registryname}_${modifier?index}"),
+							${modifier.amount}, AttributeModifier.Operation.${modifier.operation}), ${generator.map(modifier.equipmentSlot, "equipmentslots")})
+					</#list>
 					.build())
 				</#if>
 				<#if data.isMusicDisc>
@@ -172,7 +182,8 @@ public class ${name}Item extends Item {
 	<@addSpecialInformation data.specialInformation, "item." + modid + "." + registryname/>
 
 	<#assign shouldExplicitlyCallStartUsing = !data.isFood && (data.useDuration > 0)> <#-- ranged items handled in if below so no need to check for that here too -->
-	<#if hasProcedure(data.onRightClickedInAir) || data.hasInventory() || data.enableRanged || shouldExplicitlyCallStartUsing>
+	<#assign rightClickingOpensGUI = data.openGUIOnRightClick?? && (hasProcedure(data.openGUIOnRightClick) || data.openGUIOnRightClick.getFixedValue())>
+	<#if hasProcedure(data.onRightClickedInAir) || data.enableRanged || shouldExplicitlyCallStartUsing || (data.hasInventory() && rightClickingOpensGUI)>
 	@Override public InteractionResult use(Level world, Player entity, InteractionHand hand) {
 		<#if data.enableRanged>
 		InteractionResult ar = InteractionResult.FAIL;
@@ -192,15 +203,25 @@ public class ${name}Item extends Item {
 			}, false/>)
 			</#if>
 			if (entity.getAbilities().instabuild || findAmmo(entity) != ItemStack.EMPTY) {
-				ar = InteractionResult.SUCCESS;
+				ar = InteractionResult.CONSUME;
 				entity.startUsingItem(hand);
 			}
 		<#elseif shouldExplicitlyCallStartUsing>
 			entity.startUsingItem(hand);
 		</#if>
 
-		<#if data.hasInventory()>
+		<#if data.hasInventory() && rightClickingOpensGUI>
 		if (entity instanceof ServerPlayer serverPlayer) {
+			<#if hasProcedure(data.openGUIOnRightClick)>
+			if (<@procedureCode data.openGUIOnRightClick, {
+				"x": "serverPlayer.getX()",
+				"y": "serverPlayer.getY()",
+				"z": "serverPlayer.getZ()",
+				"world": "serverPlayer.level()",
+				"entity": "serverPlayer",
+				"itemstack": "entity.getItemInHand(hand)"
+			}, false/>) {
+			</#if>
 			serverPlayer.openMenu(new MenuProvider() {
 				@Override public Component getDisplayName() {
 					return Component.literal("${data.name}");
@@ -216,6 +237,7 @@ public class ${name}Item extends Item {
 				buf.writeBlockPos(entity.blockPosition());
 				buf.writeByte(hand == InteractionHand.MAIN_HAND ? 0 : 1);
 			});
+			<#if hasProcedure(data.openGUIOnRightClick)>}</#if>
 		}
 		</#if>
 
@@ -293,15 +315,15 @@ public class ${name}Item extends Item {
 		@Override public void onUseTick(Level world, LivingEntity entity, ItemStack itemstack, int time) {
 			<#if hasProcedure(data.everyTickWhileUsing)>
 				<@procedureCode data.everyTickWhileUsing, {
-            		"x": "entity.getX()",
-            		"y": "entity.getY()",
-            		"z": "entity.getZ()",
-            		"world": "world",
-            		"entity": "entity",
-            		"itemstack": "itemstack",
-            		"time": "time"
-            	}/>
-            </#if>
+					"x": "entity.getX()",
+					"y": "entity.getY()",
+					"z": "entity.getZ()",
+					"world": "world",
+					"entity": "entity",
+					"itemstack": "itemstack",
+					"time": "time"
+				}/>
+			</#if>
 			<#if data.enableRanged && data.shootConstantly>
 				if (!world.isClientSide() && entity instanceof ServerPlayer player) {
 					<@arrowShootCode/>
@@ -358,12 +380,13 @@ public class ${name}Item extends Item {
 			}
 		}
 	</#list>
-
+	
     <#if data.animations?size != 0>
     public boolean shouldCauseReequipAnimation(ItemStack oldStack, ItemStack newStack, boolean slotChanged) {
         return slotChanged && !oldStack.equals(newStack);
     }
     </#if>
+
 }
 
 <#macro arrowShootCode>
