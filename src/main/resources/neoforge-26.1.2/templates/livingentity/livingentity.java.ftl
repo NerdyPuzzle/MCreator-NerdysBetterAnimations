@@ -87,12 +87,12 @@ public class ${name}Entity extends ${extendsClass} <#if interfaces?size gt 0>imp
 	</#list>
 
 	<#if data.isBoss>
-	private final ServerBossEvent bossInfo = new ServerBossEvent(this.getDisplayName(),
+	private final ServerBossEvent bossInfo = new ServerBossEvent(Mth.createInsecureUUID(this.random), this.getDisplayName(),
 		ServerBossEvent.BossBarColor.${data.bossBarColor}, ServerBossEvent.BossBarOverlay.${data.bossBarType});
 	</#if>
 
 	<#if data.sensitiveToVibration>
-	private final DynamicGameEventListener<VibrationSystem.Listener> dynamicGameEventListener = new DynamicGameEventListener(new VibrationSystem.Listener(this));
+	private final DynamicGameEventListener<VibrationSystem.Listener> dynamicGameEventListener = new DynamicGameEventListener<>(new VibrationSystem.Listener(this));
 	private final VibrationSystem.User vibrationUser = new VibrationUser();
 	private VibrationSystem.Data vibrationData = new VibrationSystem.Data();
 	</#if>
@@ -471,25 +471,28 @@ public class ${name}Entity extends ${extendsClass} <#if interfaces?size gt 0>imp
 	</#if>
 
 	<#if data.guiBoundTo?has_content>
-	private final ItemStackHandler inventory = new ItemStackHandler(${data.inventorySize})
+	private final ItemStacksResourceHandler inventory = new ItemStacksResourceHandler(${data.inventorySize})
 	<#if data.inventoryStackSize != 99>
 	{
-		@Override public int getSlotLimit(int slot) {
-			return ${data.inventoryStackSize};
+		@Override protected int getCapacity(int index, ItemResource resource) {
+			return Math.min(${data.inventoryStackSize}, super.getCapacity(index, resource));
 		}
 	}
 	</#if>;
 
-	private final CombinedInvWrapper combined = new CombinedInvWrapper(inventory, new EntityHandsInvWrapper(this), new EntityArmorInvWrapper(this));
+	private final CombinedResourceHandler combined = new CombinedResourceHandler(inventory,
+		LivingEntityEquipmentWrapper.of(this, EquipmentSlot.Type.HAND),
+		LivingEntityEquipmentWrapper.of(this, EquipmentSlot.Type.HUMANOID_ARMOR)
+	);
 
-	public CombinedInvWrapper getCombinedInventory() {
+	public CombinedResourceHandler getCombinedInventory() {
 		return combined;
 	}
 
 	@Override protected void dropEquipment(ServerLevel serverLevel) {
 		super.dropEquipment(serverLevel);
-		for (int i = 0; i < inventory.getSlots(); ++i) {
-			ItemStack itemstack = inventory.getStackInSlot(i);
+		for (int i = 0; i < inventory.size(); i++) {
+			ItemStack itemstack = ItemUtil.getStack(inventory, i);
 			if (!itemstack.isEmpty() && !EnchantmentHelper.has(itemstack, EnchantmentEffectComponents.PREVENT_EQUIPMENT_DROP)) {
 				this.spawnAtLocation(serverLevel, itemstack);
 			}
@@ -772,14 +775,11 @@ public class ${name}Entity extends ${extendsClass} <#if interfaces?size gt 0>imp
 				retval.setTame(true, true);
 			}
 			</#if>
-			retval.finalizeSpawn(serverWorld, serverWorld.getCurrentDifficultyAt(retval.blockPosition()), EntitySpawnReason.BREEDING, null);
 			return retval;
 		}
 	<#elseif data.breedable>
 		@Override public AgeableMob getBreedOffspring(ServerLevel serverWorld, AgeableMob ageable) {
-			${name}Entity retval = ${JavaModName}Entities.${REGISTRYNAME}.get().create(serverWorld, EntitySpawnReason.BREEDING);
-			retval.finalizeSpawn(serverWorld, serverWorld.getCurrentDifficultyAt(retval.blockPosition()), EntitySpawnReason.BREEDING, null);
-			return retval;
+			return ${JavaModName}Entities.${REGISTRYNAME}.get().create(serverWorld, EntitySpawnReason.BREEDING);
 		}
 
 		@Override public boolean isFood(ItemStack stack) {
@@ -867,7 +867,7 @@ public class ${name}Entity extends ${extendsClass} <#if interfaces?size gt 0>imp
 	}
 	</#if>
 
-	<#if data.ridable && (data.canControlForward || data.canControlStrafe) || data.flyingMob>
+	<#if data.ridable && (data.canControlForward || data.canControlStrafe)>
 		@Override public void travel(Vec3 dir) {
 			<#if data.canControlForward || data.canControlStrafe>
 			Entity entity = this.getPassengers().isEmpty() ? null : (Entity) this.getPassengers().get(0);
@@ -894,11 +894,7 @@ public class ${name}Entity extends ${extendsClass} <#if interfaces?size gt 0>imp
 						float strafe = 0;
 					</#if>
 
-					<#if data.flyingMob>
-					this.travelFlying(new Vec3(strafe, 0, forward), (float) this.getAttributeValue(Attributes.FLYING_SPEED));
-					<#else>
 					super.travel(new Vec3(strafe, 0, forward));
-					</#if>
 				}
 
 				double d1 = this.getX() - this.xo;
@@ -912,11 +908,7 @@ public class ${name}Entity extends ${extendsClass} <#if interfaces?size gt 0>imp
 			}
 			</#if>
 
-			<#if data.flyingMob>
-			this.travelFlying(dir, (float) this.getAttributeValue(Attributes.FLYING_SPEED));
-			<#else>
 			super.travel(dir);
-			</#if>
 		}
 	</#if>
 
@@ -942,19 +934,20 @@ public class ${name}Entity extends ${extendsClass} <#if interfaces?size gt 0>imp
 	@Override public void setNoGravity(boolean ignored) {
 		super.setNoGravity(true);
 	}
-	</#if>
 
-	<#if data.flyingMob>
-	public void aiStep() {
+	@Override public void aiStep() {
 		super.aiStep();
-
 		this.setNoGravity(true);
+	}
+
+	@Override protected float getFlyingSpeed() {
+		return (float) this.getAttributeValue(Attributes.FLYING_SPEED);
 	}
 	</#if>
 
 	public static void init(RegisterSpawnPlacementsEvent event) {
 		<#if data.spawnThisMob>
-			<#if data.mobSpawningType == "creature">
+			<#if data.mobSpawningType.getUnmappedValue() == "creature">
 			event.register(${JavaModName}Entities.${REGISTRYNAME}.get(),
 					SpawnPlacementTypes.ON_GROUND, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
 				<#if hasProcedure(data.spawningCondition)>
@@ -971,7 +964,7 @@ public class ${name}Entity extends ${extendsClass} <#if interfaces?size gt 0>imp
 				</#if>,
 				RegisterSpawnPlacementsEvent.Operation.REPLACE
 			);
-			<#elseif data.mobSpawningType == "ambient" || data.mobSpawningType == "misc">
+			<#elseif data.mobSpawningType.getUnmappedValue() == "ambient" || data.mobSpawningType.getUnmappedValue() == "misc">
 			event.register(${JavaModName}Entities.${REGISTRYNAME}.get(),
 					SpawnPlacementTypes.NO_RESTRICTIONS, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
 					<#if hasProcedure(data.spawningCondition)>
@@ -986,7 +979,7 @@ public class ${name}Entity extends ${extendsClass} <#if interfaces?size gt 0>imp
 					</#if>,
 					RegisterSpawnPlacementsEvent.Operation.REPLACE
 			);
-			<#elseif data.mobSpawningType == "waterCreature" || data.mobSpawningType == "waterAmbient">
+			<#elseif data.mobSpawningType.getUnmappedValue() == "waterCreature" || data.mobSpawningType.getUnmappedValue() == "waterAmbient">
 			event.register(${JavaModName}Entities.${REGISTRYNAME}.get(),
 					SpawnPlacementTypes.IN_WATER, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
 					<#if hasProcedure(data.spawningCondition)>
@@ -1003,7 +996,7 @@ public class ${name}Entity extends ${extendsClass} <#if interfaces?size gt 0>imp
 					</#if>,
 					RegisterSpawnPlacementsEvent.Operation.REPLACE
 			);
-			<#elseif data.mobSpawningType == "undergroundWaterCreature">
+			<#elseif data.mobSpawningType.getUnmappedValue() == "undergroundWaterCreature">
 			event.register(${JavaModName}Entities.${REGISTRYNAME}.get(),
 					SpawnPlacementTypes.IN_WATER, Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
 					<#if hasProcedure(data.spawningCondition)>
@@ -1131,7 +1124,7 @@ public class ${name}Entity extends ${extendsClass} <#if interfaces?size gt 0>imp
 			</#if>
 		}
 
-		@Override public void onReceiveVibration(ServerLevel world, BlockPos vibrationPos, Holder<GameEvent> holder, @Nullable Entity vibrationSource, @Nullable Entity projectileShooter, float distance) {
+		@Override public void onReceiveVibration(ServerLevel world, BlockPos vibrationPos, Holder<GameEvent> holder, @Nullable Entity vibrationSource, @Nullable Entity immediateSource, float distance) {
 			<#if hasProcedure(data.onReceivedVibration)>
 				<@procedureCode data.onReceivedVibration {
 					"x": "entity.getX()",
@@ -1143,7 +1136,8 @@ public class ${name}Entity extends ${extendsClass} <#if interfaces?size gt 0>imp
 					"world": "world",
 					"entity": "entity",
 					"sourceentity": "vibrationSource",
-					"immediatesourceentity": "projectileShooter"
+					"immediatesourceentity": "immediateSource",
+					"distance": "distance"
 				}/>
 			</#if>
 		}

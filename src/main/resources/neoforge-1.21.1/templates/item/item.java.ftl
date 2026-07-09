@@ -388,11 +388,9 @@ public class ${name}Item extends <#if data.hasBannerPatterns()>BannerPattern</#i
 	}
 	</#if>
 
-    <#if data.animations?size != 0>
     public boolean shouldCauseReequipAnimation(ItemStack oldStack, ItemStack newStack, boolean slotChanged) {
         return slotChanged && !oldStack.equals(newStack);
     }
-    </#if>
 }
 
 <#macro arrowShootCode>

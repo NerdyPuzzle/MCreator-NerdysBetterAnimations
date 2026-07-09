@@ -64,7 +64,7 @@ public class ${name}Item extends Item {
 				.fireResistant()
 				</#if>
 				<#if data.hasBannerPatterns()>
-				.component(DataComponents.PROVIDES_BANNER_PATTERNS, PROVIDED_PATTERNS)
+				.delayedComponent(DataComponents.PROVIDES_BANNER_PATTERNS, context -> context.getOrThrow(PROVIDED_PATTERNS))
 				</#if>
 				<#if data.isFood>
 				.food((new FoodProperties.Builder())
@@ -73,18 +73,18 @@ public class ${name}Item extends Item {
 					<#if data.isAlwaysEdible>.alwaysEdible()</#if>
 					.build()
 					<#if data.hasCustomFoodConsumable()>,
-						<#if data.animation == "eat">
+						<#if data.animation.getUnmappedValue() == "eat">
 						Consumables.defaultFood()
-						<#elseif data.animation == "drink">
+						<#elseif data.animation.getUnmappedValue() == "drink">
 						Consumables.defaultDrink()
 						<#else>
-						Consumables.defaultFood().animation(ItemUseAnimation.${data.animation?upper_case})
+						Consumables.defaultFood().animation(${data.animation})
 						</#if>
 						<#if data.useDuration != 32>
 						.consumeSeconds(${[data.useDuration, 0]?max / 20}F)
 						</#if>
 						.build()
-					<#elseif data.animation == "drink">,
+					<#elseif data.animation.getUnmappedValue() == "drink">,
 						Consumables.DEFAULT_DRINK
 					</#if>
 				)
@@ -103,7 +103,8 @@ public class ${name}Item extends Item {
 					<#list data.attributeModifiers as modifier>
 					.add(${modifier.attribute}, new AttributeModifier(
 							Identifier.fromNamespaceAndPath(${JavaModName}.MODID, "${registryname}_${modifier?index}"),
-							${modifier.amount}, AttributeModifier.Operation.${modifier.operation}), ${generator.map(modifier.equipmentSlot, "equipmentslots")})
+							${modifier.amount}, AttributeModifier.Operation.${modifier.operation}),
+							<#if modifier.equipmentSlot == "default">EquipmentSlotGroup.MAINHAND<#else>${modifier.equipmentSlot}</#if>)
 					</#list>
 					.build())
 				</#if>
@@ -122,7 +123,7 @@ public class ${name}Item extends Item {
 	<#if data.hasCustomEatResultItem()>
 	@SubscribeEvent public static void modifyItemComponents(ModifyDefaultComponentsEvent event) {
 		event.modify(${JavaModName}Items.${REGISTRYNAME}.get(),
-				builder -> builder.set(DataComponents.USE_REMAINDER, new UseRemainder(${mappedMCItemToItemStackCode(data.eatResultItem, 1)})));
+				(builder, _, _) -> builder.set(DataComponents.USE_REMAINDER, new UseRemainder(new ItemStackTemplate(${mappedMCItemToItem(data.eatResultItem)}))));
 	}
 	</#if>
 
@@ -132,29 +133,29 @@ public class ${name}Item extends Item {
 	}
 	</#if>
 
-	<#if !data.isFood && data.animation != "none"> <#-- If item is food, this is handled by the consumable component -->
+	<#if !data.isFood && data.animation.getUnmappedValue() != "none"> <#-- If item is food, this is handled by the consumable component -->
 	@Override public ItemUseAnimation getUseAnimation(ItemStack itemstack) {
-		return ItemUseAnimation.${data.animation?upper_case};
+		return ${data.animation};
 	}
 	</#if>
 
 	<#if data.stayInGridWhenCrafting>
 		<#if data.recipeRemainder?? && !data.recipeRemainder.isEmpty()>
-			@Override public ItemStack getCraftingRemainder(ItemStack itemstack) {
-				return ${mappedMCItemToItemStackCode(data.recipeRemainder, 1)};
+			@Override public ItemStackTemplate getCraftingRemainder(ItemInstance itemInstance) {
+				return new ItemStackTemplate(${mappedMCItemToItem(data.recipeRemainder)});
 			}
 		<#elseif data.damageOnCrafting && data.damageCount != 0>
-			@Override public ItemStack getCraftingRemainder(ItemStack itemstack) {
+			@Override public ItemStackTemplate getCraftingRemainder(ItemInstance itemInstance) {
 				ItemStack retval = new ItemStack(this);
-				retval.setDamageValue(itemstack.getDamageValue() + 1);
+				retval.setDamageValue(itemInstance.getOrDefault(DataComponents.DAMAGE, 0) + 1);
 				if(retval.getDamageValue() >= retval.getMaxDamage()) {
-					return ItemStack.EMPTY;
+					return null;
 				}
-				return retval;
+				return ItemStackTemplate.fromNonEmptyStack(retval);
 			}
 		<#else>
-			@Override public ItemStack getCraftingRemainder(ItemStack itemstack) {
-				return new ItemStack(this);
+			@Override public ItemStackTemplate getCraftingRemainder(ItemInstance itemInstance) {
+				return new ItemStackTemplate(this);
 			}
 		</#if>
 	</#if>
@@ -359,14 +360,14 @@ public class ${name}Item extends Item {
 			public static final MapCodec<${propClassName}Property> MAP_CODEC = MapCodec.unit(new ${propClassName}Property());
 
 			@Override
-			public float get(ItemStack itemStackToRender, @Nullable ClientLevel clientWorld, @Nullable LivingEntity entity, int seed) {
+			public float get(ItemStack itemStackToRender, @Nullable ClientLevel clientWorld, @Nullable ItemOwner owner, int seed) {
 				<#if hasProcedure(property.getValue())>
 				return (float) <@procedureCode property.getValue(), {
-					"x": "entity != null ? entity.getX() : 0",
-					"y": "entity != null ? entity.getY() : 0",
-					"z": "entity != null ? entity.getZ() : 0",
-					"world": "entity != null ? entity.level() : clientWorld",
-					"entity": "entity",
+					"x": "owner != null ? owner.position().x() : 0",
+					"y": "owner != null ? owner.position().y() : 0",
+					"z": "owner != null ? owner.position().z() : 0",
+					"world": "owner != null ? owner.level() : clientWorld",
+					"entity": "owner.asLivingEntity()",
 					"itemstack": "itemStackToRender"
 				}, false/>;
 				<#else>
@@ -380,12 +381,10 @@ public class ${name}Item extends Item {
 			}
 		}
 	</#list>
-	
-    <#if data.animations?size != 0>
+
     public boolean shouldCauseReequipAnimation(ItemStack oldStack, ItemStack newStack, boolean slotChanged) {
         return slotChanged && !oldStack.equals(newStack);
     }
-    </#if>
 
 }
 
@@ -411,7 +410,7 @@ public class ${name}Item extends Item {
 		</#if>
 
 		<#if data.damageCount != 0>
-		itemstack.hurtAndBreak(1, entity, LivingEntity.getSlotForHand(entity.getUsedItemHand()));
+		itemstack.hurtAndBreak(1, entity, entity.getUsedItemHand().asEquipmentSlot());
 		</#if>
 
 		if (player.getAbilities().instabuild) {

@@ -318,10 +318,10 @@ public class Launcher extends JavaPlugin {
 											event.setTemplateOutput(event.getTemplateOutput().replace("/*@perspective*/", ""));
 											break;
 										case "Only in first person":
-											event.setTemplateOutput(event.getTemplateOutput().replace("/*@perspective*/", "if (!isFirstPerson) resetAnimations(model);"));
+											event.setTemplateOutput(event.getTemplateOutput().replace("/*@perspective*/", " && isFirstPerson"));
 											break;
 										case "Only in third person":
-											event.setTemplateOutput(event.getTemplateOutput().replace("/*@perspective*/", "if (!isThirdPerson) resetAnimations(model);"));
+											event.setTemplateOutput(event.getTemplateOutput().replace("/*@perspective*/", " && isThirdPerson"));
 											break;
 									}
 								}

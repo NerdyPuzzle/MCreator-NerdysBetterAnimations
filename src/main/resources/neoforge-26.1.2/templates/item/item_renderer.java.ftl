@@ -58,29 +58,32 @@ package ${package}.client.renderer.item;
 		event.register(Identifier.parse("${modid}:${registryname}"), ${name}ItemRenderer.Unbaked.MAP_CODEC);
 	}
 
-	private static final Map<Integer, Function<EntityModelSet, ${name}ItemRenderer>> MODELS = Map.ofEntries(
+	private static final Map<Integer, Function<Unbaked.CustomBakingContext, ${name}ItemRenderer>> MODELS = Map.ofEntries(
 		<#list models as model>
-			Map.entry(${model[0]}, modelSet -> new ${name}ItemRenderer(
-				new <#if model[0] == -1 && data.animations?has_content>AnimatedModel<#else>${model[1]}</#if>(modelSet.bakeLayer(${model[1]}.LAYER_LOCATION)),
-				Identifier.parse("${model[2].format("%s:textures/item/%s")}.png")
+			Map.entry(${model[0]}, context -> new ${name}ItemRenderer(
+				new <#if model[0] == -1 && data.animations?has_content>AnimatedModel<#else>${model[1]}</#if>(context.bakingContext().entityModelSet().bakeLayer(${model[1]}.LAYER_LOCATION)),
+				Identifier.parse("${model[2].format("%s:textures/item/%s")}.png"),
+				context.display()
 			))<#sep>,
 		</#list>
 	);
 
 	private final EntityModel<LivingEntityRenderState> model;
 	private final Identifier texture;
+	private final ItemDisplayContext displayContext;
 
 	private final LivingEntityRenderState renderState;
 	private final long start;
 
-	private ${name}ItemRenderer(EntityModel<LivingEntityRenderState> model, Identifier texture) {
+	private ${name}ItemRenderer(EntityModel<LivingEntityRenderState> model, Identifier texture, ItemDisplayContext displayContext) {
 		this.model = model;
 		this.texture = texture;
+		this.displayContext = displayContext;
 		this.renderState = new LivingEntityRenderState();
 		this.start = System.currentTimeMillis();
 	}
 
-	@Override public void render(ItemStack itemstack, ItemDisplayContext displayContext, PoseStack poseStack, MultiBufferSource bufferSource, int packedLight, int packedOverlay, boolean glint) {
+	@Override public void submit(ItemStack itemstack, PoseStack poseStack, SubmitNodeCollector submitNodeCollector, int lightCoords, int overlayCoords, boolean glint, int outlineColor) {
 		<#if data.hasCustomJAVAModel() && data.animations?has_content>
 		updateRenderState(itemstack);
 		</#if>
@@ -92,38 +95,20 @@ package ${package}.client.renderer.item;
 		poseStack.scale(-1, 1, 1);
 		renderState.ageInTicks = (System.currentTimeMillis() - start) / 50.0f;
 		<#if data.hasCustomJAVAModel() && data.animations?has_content>
-		if (model instanceof AnimatedModel animatedModel)
-			animatedModel.setupItemStackAnim(this, itemstack, renderState);
-		else
-		    model.setupAnim(renderState);
-		VertexConsumer vertexConsumer = ItemRenderer.getFoilBuffer(bufferSource, model.renderType(texture), false, glint);
 		boolean isFirstPerson = displayContext == ItemDisplayContext.FIRST_PERSON_LEFT_HAND || displayContext == ItemDisplayContext.FIRST_PERSON_RIGHT_HAND;
 		boolean isThirdPerson = displayContext == ItemDisplayContext.THIRD_PERSON_LEFT_HAND || displayContext == ItemDisplayContext.THIRD_PERSON_RIGHT_HAND;
-		/*@perspective*/
-		try {
-		    if (isFirstPerson && Minecraft.getInstance().player != null && (model.root().getChild("left_arm") != null || model.root().getChild("right_arm") != null)) {
-			    AbstractClientPlayer player = Minecraft.getInstance().player;
-			    PlayerRenderer playerRenderer = (PlayerRenderer) Minecraft.getInstance().getEntityRenderDispatcher().getRenderer(player);
-			    PlayerModel playerModel = playerRenderer.getModel();
-			    Identifier skinTexture = player.getSkin().texture();
-			    ItemArms.renderPartWithArms(model, poseStack, vertexConsumer, bufferSource, packedLight, packedOverlay, playerModel, skinTexture, player.isInvisible());
-		    } else {
-			    ModelPart leftArm = model.root().getChild("left_arm");
-                ModelPart rightArm = model.root().getChild("right_arm");
-			    if (leftArm != null)
-			        leftArm.skipDraw = true;
-			    if (rightArm != null) {
-			        rightArm.skipDraw = true;
-			        rightArm.offsetScale(new Vector3f(-rightArm.xScale, -rightArm.yScale, -rightArm.zScale));
-			    }
-			    model.renderToBuffer(poseStack, vertexConsumer, packedLight, packedOverlay);
-		    }
-		} catch (Exception ignored) {}
-		<#else>
-		VertexConsumer vertexConsumer = ItemRenderer.getFoilBuffer(bufferSource, model.renderType(texture), false, glint);
-		model.setupAnim(renderState);
-		model.renderToBuffer(poseStack, vertexConsumer, packedLight, packedOverlay);
+		if (model instanceof AnimatedModel animatedModel/*@perspective*/)
+			animatedModel.setupItemStackAnim(this, itemstack, renderState);
+		else
 		</#if>
+		model.setupAnim(renderState);
+
+		submitNodeCollector.submitModel(this.model, renderState, poseStack, texture, lightCoords, overlayCoords, outlineColor, null);
+
+		if (glint) {
+			submitNodeCollector.submitModel(this.model, renderState, poseStack, RenderTypes.entityGlint(), lightCoords, overlayCoords, -1, null);
+		}
+
 		poseStack.popPose();
 	}
 
@@ -131,18 +116,19 @@ package ${package}.client.renderer.item;
 		return itemstack;
 	}
 
-	@Override public void getExtents(Set<Vector3f> extentsSet) {
+	@Override public void getExtents(Consumer<Vector3fc> output) {
 		PoseStack posestack = new PoseStack();
-		this.model.root().getExtentsForGui(posestack, extentsSet);
+		this.model.root().getExtentsForGui(posestack, output);
 	}
 
 	private static boolean isInventory(ItemDisplayContext type) {
 		return type == ItemDisplayContext.GUI || type == ItemDisplayContext.FIXED;
 	}
 
-	public record Unbaked(int index) implements SpecialModelRenderer.Unbaked {
+	public record Unbaked(int index, ItemDisplayContext display) implements SpecialModelRenderer.Unbaked<ItemStack> {
 		public static final MapCodec<${name}ItemRenderer.Unbaked> MAP_CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-			ExtraCodecs.NON_NEGATIVE_INT.optionalFieldOf("index").xmap(opt -> opt.orElse(-1), i -> i == -1 ? Optional.empty() : Optional.of(i)).forGetter(${name}ItemRenderer.Unbaked::index)
+				ExtraCodecs.NON_NEGATIVE_INT.optionalFieldOf("index").xmap(opt -> opt.orElse(-1), i -> i == -1 ? Optional.empty() : Optional.of(i)).forGetter(${name}ItemRenderer.Unbaked::index),
+				ItemDisplayContext.CODEC.optionalFieldOf("display", ItemDisplayContext.NONE).forGetter(${name}ItemRenderer.Unbaked::display)
 		).apply(instance, ${name}ItemRenderer.Unbaked::new));
 
 		@Override
@@ -151,23 +137,23 @@ package ${package}.client.renderer.item;
 		}
 
 		@Override
-		public SpecialModelRenderer<?> bake(EntityModelSet modelSet) {
-			return ${name}ItemRenderer.MODELS.get(index).apply(modelSet);
+		public SpecialModelRenderer<ItemStack> bake(BakingContext bakingContext) {
+			return ${name}ItemRenderer.MODELS.get(index).apply(new CustomBakingContext(bakingContext, display));
 		}
+
+		public record CustomBakingContext(BakingContext bakingContext, ItemDisplayContext display) {}
+
 	}
 
 	<#if data.hasCustomJAVAModel() && data.animations?has_content>
-	private static final Map<ItemStack, Map<Integer, AnimationState>> CACHE = new WeakHashMap<>();
+	private final Map<ItemStack, Map<Integer, AnimationState>> CACHE = new WeakHashMap<>();
 
-	private static Map<Integer, AnimationState> getAnimationState(ItemStack stack) {
+	private Map<Integer, AnimationState> getAnimationState(ItemStack stack) {
 		return CACHE.computeIfAbsent(stack, s -> IntStream.range(0, ${data.animations?size}).boxed().collect(Collectors.toMap(i -> i, i -> new AnimationState(), (a, b) -> b)));
 	}
 
 	private void updateRenderState(ItemStack itemstack) {
 		int tickCount = (int) (System.currentTimeMillis() - start) / 50;
-	    <#if data.animations?size != 0>
-	        updateAnimation(itemstack, tickCount);
-	    </#if>
 		<#list data.animations as animation>
 			<#if hasProcedure(animation.condition)>
 				getAnimationState(itemstack).get(${animation?index}).animateWhen(<@procedureCode animation.condition, {
@@ -179,66 +165,10 @@ package ${package}.client.renderer.item;
 				"world": "Minecraft.getInstance().level"
 				}, false/>, tickCount);
 			<#else>
-				if (getAnimationState(itemstack).get(${animation?index}).isStarted()) {
-					float elapsedSeconds = getAnimationState(itemstack).get(${animation?index}).getTimeInMillis(tickCount) / 1000.0F;
-					if (elapsedSeconds >= ${animation.animation}.lengthInSeconds()) {
-						if (!${animation.animation}.looping())
-							getAnimationState(itemstack).get(${animation?index}).stop();
-						else
-							getAnimationState(itemstack).get(${animation?index}).start(tickCount);
-					}
-				}
+				getAnimationState(itemstack).get(${animation?index}).animateWhen(true, tickCount);
 			</#if>
 		</#list>
 	}
-
-	<#if data.animations?size != 0>
-    private void updateAnimation(ItemStack itemstack, int tickCount) {
-        CompoundTag data = itemstack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
-        int oldAnim = data.getIntOr("oldAnimState", 0);
-        int newAnim = data.getIntOr("animState", 0);
-        if (oldAnim != newAnim) {
-            switch (newAnim) {
-				<#list data.animations as animation>
-				case -${animation?index + 1}:
-					getAnimationState(itemstack).get(${animation?index}).stop();
-					break;
-				</#list>
-                <#list data.animations as animation>
-				case ${animation?index}:
-					getAnimationState(itemstack).get(${animation?index}).start(tickCount);
-					break;
-				</#list>
-            }
-            CustomData.update(DataComponents.CUSTOM_DATA, itemstack, tag -> tag.putInt("oldAnimState", newAnim));
-        }
-    }
-
-    private static boolean init = false;
-
-    @SubscribeEvent
-    public static void resetItems(ClientTickEvent.Pre event) {
-        if (Minecraft.getInstance().player != null && !CACHE.isEmpty() && !init) {
-            for (Map.Entry<ItemStack, Map<Integer, AnimationState>> entry : CACHE.entrySet()) {
-                ItemStack itemstack = entry.getKey();
-                CustomData.update(DataComponents.CUSTOM_DATA, itemstack, tag -> tag.putInt("oldAnimState", itemstack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag().getIntOr("animState", 0)));
-                for (int i = 0; i < ${data.animations?size}; i++) {
-                    getAnimationState(itemstack).get(i).stop();
-                }
-                init = true;
-            }
-        }
-    }
-
-    @SubscribeEvent
-    public static void logOut(ClientPlayerNetworkEvent.LoggingOut event) {
-        init = false;
-    }
-
-    public void resetAnimations(EntityModel model) {
-        model.root().getAllParts().forEach(ModelPart::resetPose);
-    }
-	</#if>
 
 	private static final class AnimatedModel extends ${data.customModelName.split(":")[0]} {
 

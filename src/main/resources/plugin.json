@@ -8,7 +8,7 @@
   "info": {
     "name": "Nerdy's better animations",
     "version": "1.2",
-    "description": "Improves upon the java animation system for entities and items",
+    "description": "Improves upon the java animation system for entities",
     "author": "NerdyPuzzle"
   }
 }

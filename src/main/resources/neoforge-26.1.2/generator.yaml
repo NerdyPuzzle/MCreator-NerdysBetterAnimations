@@ -1,3 +1,0 @@
-base_templates:
-  - template: item_arms.java.ftl
-    name: "@SRCROOT/@BASEPACKAGEPATH/client/ItemArms.java"

@@ -90,32 +90,16 @@ package ${package}.client.renderer.item;
 		poseStack.scale(1, -1, displayContext == ItemDisplayContext.GUI ? -1 : 1);
 		poseStack.mulPose(Axis.YP.rotationDegrees(displayContext == ItemDisplayContext.GUI ? 180f : 0));
 		poseStack.scale(-1, 1, 1);
-		<#if data.hasCustomJAVAModel() && data.animations?has_content>
 		VertexConsumer vertexConsumer = ItemRenderer.getFoilBufferDirect(bufferSource, model.renderType(texture), false, itemstack.hasFoil());
-		if (model instanceof AnimatedModel animatedModel)
-			animatedModel.setupItemStackAnim(itemstack, (System.currentTimeMillis() - start) / 50.0f);
-		else {
-		    model.setupAnim(null, 0, 0, (System.currentTimeMillis() - start) / 50.0f, 0, 0);
-		}
+		<#if data.hasCustomJAVAModel() && data.animations?has_content>
 		boolean isFirstPerson = displayContext == ItemDisplayContext.FIRST_PERSON_LEFT_HAND || displayContext == ItemDisplayContext.FIRST_PERSON_RIGHT_HAND;
 		boolean isThirdPerson = displayContext == ItemDisplayContext.THIRD_PERSON_LEFT_HAND || displayContext == ItemDisplayContext.THIRD_PERSON_RIGHT_HAND;
-		/*@perspective*/
-		try {
-		    if (model instanceof AnimatedModel animatedModel && isFirstPerson && Minecraft.getInstance().player != null && (animatedModel.animator.root().getChild("left_arm") != null || animatedModel.animator.root().getChild("right_arm") != null)) {
-			    AbstractClientPlayer player = Minecraft.getInstance().player;
-			    PlayerRenderer playerRenderer = (PlayerRenderer) Minecraft.getInstance().getEntityRenderDispatcher().getRenderer(player);
-			    PlayerModel<?> playerModel = playerRenderer.getModel();
-			    ResourceLocation skinTexture = player.getSkin().texture();
-			    ItemArms.renderPartWithArms(animatedModel.animator, poseStack, vertexConsumer, bufferSource, packedLight, packedOverlay, playerModel, skinTexture, player.isInvisible());
-		    } else {
-			    model.renderToBuffer(poseStack, vertexConsumer, packedLight, packedOverlay);
-		    }
-		} catch (Exception ignored) {}
-		<#else>
-		    VertexConsumer vertexConsumer = ItemRenderer.getFoilBufferDirect(bufferSource, model.renderType(texture), false, itemstack.hasFoil());
-		    model.setupAnim(null, 0, 0, (System.currentTimeMillis() - start) / 50.0f, 0, 0);
-		    model.renderToBuffer(poseStack, vertexConsumer, packedLight, packedOverlay);
+		if (model instanceof AnimatedModel animatedModel/*@perspective*/)
+			animatedModel.setupItemStackAnim(itemstack, (System.currentTimeMillis() - start) / 50.0f);
+		else
 		</#if>
+		model.setupAnim(null, 0, 0, (System.currentTimeMillis() - start) / 50.0f, 0, 0);
+		model.renderToBuffer(poseStack, vertexConsumer, packedLight, packedOverlay);
 		poseStack.popPose();
 	}
 
@@ -128,17 +112,14 @@ package ${package}.client.renderer.item;
 	}
 
 	<#if data.hasCustomJAVAModel() && data.animations?has_content>
-	private static final Map<ItemStack, Map<Integer, AnimationState>> CACHE = new WeakHashMap<>();
+	private final Map<ItemStack, Map<Integer, AnimationState>> CACHE = new WeakHashMap<>();
 
-	private static Map<Integer, AnimationState> getAnimationState(ItemStack stack) {
+	private Map<Integer, AnimationState> getAnimationState(ItemStack stack) {
 		return CACHE.computeIfAbsent(stack, s -> IntStream.range(0, ${data.animations?size}).boxed().collect(Collectors.toMap(i -> i, i -> new AnimationState(), (a, b) -> b)));
 	}
 
 	private void updateRenderState(ItemStack itemstack) {
 		int tickCount = (int) (System.currentTimeMillis() - start) / 50;
-	    <#if data.animations?size != 0>
-	        updateAnimation(itemstack, tickCount);
-	    </#if>
 		<#list data.animations as animation>
 			<#if hasProcedure(animation.condition)>
 				getAnimationState(itemstack).get(${animation?index}).animateWhen(<@procedureCode animation.condition, {
@@ -150,73 +131,16 @@ package ${package}.client.renderer.item;
 					"world": "Minecraft.getInstance().level"
 				}, false/>, tickCount);
 			<#else>
-				if (getAnimationState(itemstack).get(${animation?index}).isStarted()) {
-					float elapsedSeconds = getAnimationState(itemstack).get(${animation?index}).getAccumulatedTime() / 1000.0F;
-					if (elapsedSeconds >= ${animation.animation}.lengthInSeconds()) {
-						if (!${animation.animation}.looping())
-							getAnimationState(itemstack).get(${animation?index}).stop();
-						else
-							getAnimationState(itemstack).get(${animation?index}).start(tickCount);
-					}
-				}
+				getAnimationState(itemstack).get(${animation?index}).animateWhen(true, tickCount);
 			</#if>
 		</#list>
 	}
-
-	<#if data.animations?size != 0>
-    private void updateAnimation(ItemStack itemstack, int tickCount) {
-        CompoundTag data = itemstack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
-        int oldAnim = data.getInt("oldAnimState");
-        int newAnim = data.getInt("animState");
-        if (oldAnim != newAnim) {
-            switch (newAnim) {
-				<#list data.animations as animation>
-				case -${animation?index + 1}:
-					getAnimationState(itemstack).get(${animation?index}).stop();
-					break;
-				</#list>
-                <#list data.animations as animation>
-				case ${animation?index}:
-					getAnimationState(itemstack).get(${animation?index}).start(tickCount);
-					break;
-				</#list>
-            }
-            CustomData.update(DataComponents.CUSTOM_DATA, itemstack, tag -> tag.putInt("oldAnimState", newAnim));
-        }
-    }
-
-    private static boolean init = false;
-
-    @SubscribeEvent
-    public static void resetItems(ClientTickEvent.Pre event) {
-        if (Minecraft.getInstance().player != null && !CACHE.isEmpty() && !init) {
-            for (Map.Entry<ItemStack, Map<Integer, AnimationState>> entry : CACHE.entrySet()) {
-                ItemStack itemstack = entry.getKey();
-                CustomData.update(DataComponents.CUSTOM_DATA, itemstack, tag -> tag.putInt("oldAnimState", itemstack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag().getInt("animState")));
-                for (int i = 0; i < ${data.animations?size}; i++) {
-                    getAnimationState(itemstack).get(i).stop();
-                }
-                init = true;
-            }
-        }
-    }
-
-    @SubscribeEvent
-    public static void logOut(ClientPlayerNetworkEvent.LoggingOut event) {
-        init = false;
-    }
-
-    public void resetAnimations(EntityModel model) {
-        if (model instanceof AnimatedModel animated)
-            animated.animator.root().getAllParts().forEach(ModelPart::resetPose);
-    }
-	</#if>
 
 	private final class AnimatedModel extends ${data.customModelName.split(":")[0]} {
 
 		private final ModelPart root;
 
-		public final BlockEntityHierarchicalModel animator = new BlockEntityHierarchicalModel();
+		private final BlockEntityHierarchicalModel animator = new BlockEntityHierarchicalModel();
 
 		public AnimatedModel(ModelPart root) {
 			super(root);
