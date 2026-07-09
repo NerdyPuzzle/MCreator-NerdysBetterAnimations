@@ -1,7 +1,7 @@
 package ${package}.client;
 
 public class ItemArms {
-	public static void renderPartWithArms(EntityModel<LivingEntityRenderState> model, PoseStack poseStack, VertexConsumer vertexConsumer, MultiBufferSource bufferSource, int packedLight, int packedOverlay, PlayerModel playerModel, ResourceLocation skinTexture, boolean invisible) {
+	public static void renderPartWithArms(EntityModel<LivingEntityRenderState> model, PoseStack poseStack, VertexConsumer vertexConsumer, MultiBufferSource bufferSource, int packedLight, int packedOverlay, PlayerModel playerModel, Identifier skinTexture, boolean invisible) {
 		ModelPart leftArm = model.root().getChild("left_arm");
 		ModelPart rightArm = model.root().getChild("right_arm");
 		if (leftArm != null)
