@@ -103,6 +103,25 @@ package ${package}.client.renderer.item;
 		</#if>
 		model.setupAnim(renderState);
 
+		ModelPart leftArm = null;
+		ModelPart rightArm = null;
+		ModelPart root = model.root();
+		if (root.hasChild("left_arm"))
+		    leftArm = root.getChild("left_arm");
+		if (root.hasChild("right_arm"))
+		    rightArm = root.getChild("right_arm");
+		if (leftArm != null || rightArm != null) {
+			Minecraft mc = Minecraft.getInstance();
+			AbstractClientPlayer player = mc.player;
+			AvatarRenderer playerRenderer = (AvatarRenderer) mc.getEntityRenderDispatcher().getRenderer(player);
+			PlayerModel playerModel = (PlayerModel) playerRenderer.getModel();
+			Identifier skinTexture = player.getSkin().body().texturePath();
+			if (!player.isInvisible()) {
+				renderArm(leftArm, playerModel, skinTexture, submitNodeCollector, poseStack, lightCoords, true, <#if data.hasCustomJAVAModel() && data.animations?has_content>isFirstPerson<#else>displayContext == ItemDisplayContext.FIRST_PERSON_LEFT_HAND || displayContext == ItemDisplayContext.FIRST_PERSON_RIGHT_HAND</#if>);
+				renderArm(rightArm, playerModel, skinTexture, submitNodeCollector, poseStack, lightCoords, false, <#if data.hasCustomJAVAModel() && data.animations?has_content>isFirstPerson<#else>displayContext == ItemDisplayContext.FIRST_PERSON_LEFT_HAND || displayContext == ItemDisplayContext.FIRST_PERSON_RIGHT_HAND</#if>);
+			}
+		}
+
 		submitNodeCollector.submitModel(this.model, renderState, poseStack, texture, lightCoords, overlayCoords, outlineColor, null);
 
 		if (glint) {
@@ -110,6 +129,18 @@ package ${package}.client.renderer.item;
 		}
 
 		poseStack.popPose();
+	}
+
+	private void renderArm(ModelPart arm, PlayerModel model, Identifier skin, SubmitNodeCollector collector, PoseStack poseStack, int packedLight, boolean left, boolean firstPerson) {
+		if (arm != null && firstPerson) {
+			ModelPart playerArm = left ? model.leftArm : model.rightArm;
+			playerArm.loadPose(arm.storePose());
+			playerArm.xRot += (float) Math.PI;
+			arm.visible = false;
+			collector.submitModelPart(playerArm, poseStack, RenderTypes.entityTranslucent(skin), packedLight, OverlayTexture.NO_OVERLAY, null);
+		}
+		if (arm != null)
+		    arm.visible = false;
 	}
 
 	@Override public ItemStack extractArgument(ItemStack itemstack) {

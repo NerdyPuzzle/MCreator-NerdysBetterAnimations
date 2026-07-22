@@ -90,7 +90,6 @@ package ${package}.client.renderer.item;
 		poseStack.scale(1, -1, displayContext == ItemDisplayContext.GUI ? -1 : 1);
 		poseStack.mulPose(Axis.YP.rotationDegrees(displayContext == ItemDisplayContext.GUI ? 180f : 0));
 		poseStack.scale(-1, 1, 1);
-		VertexConsumer vertexConsumer = ItemRenderer.getFoilBufferDirect(bufferSource, model.renderType(texture), false, itemstack.hasFoil());
 		<#if data.hasCustomJAVAModel() && data.animations?has_content>
 		boolean isFirstPerson = displayContext == ItemDisplayContext.FIRST_PERSON_LEFT_HAND || displayContext == ItemDisplayContext.FIRST_PERSON_RIGHT_HAND;
 		boolean isThirdPerson = displayContext == ItemDisplayContext.THIRD_PERSON_LEFT_HAND || displayContext == ItemDisplayContext.THIRD_PERSON_RIGHT_HAND;
@@ -99,8 +98,54 @@ package ${package}.client.renderer.item;
 		else
 		</#if>
 		model.setupAnim(null, 0, 0, (System.currentTimeMillis() - start) / 50.0f, 0, 0);
-		model.renderToBuffer(poseStack, vertexConsumer, packedLight, packedOverlay);
+		ModelPart leftArm = null;
+		ModelPart rightArm = null;
+		<#if !(data.hasCustomJAVAModel() && data.animations?has_content)>
+		try {
+			Field leftField = model.getClass().getDeclaredField("left_arm");
+			leftField.setAccessible(true);
+			leftArm = (ModelPart) leftField.get(model);
+		} catch (Exception e) {}
+		try {
+			Field rightField = model.getClass().getDeclaredField("right_arm");
+			rightField.setAccessible(true);
+			rightArm = (ModelPart) rightField.get(model);
+		} catch (Exception e) {}
+		<#else>
+		ModelPart root = ((AnimatedModel)model).animator.root();
+		if (root.hasChild("left_arm"))
+		    leftArm = root.getChild("left_arm");
+		if (root.hasChild("right_arm"))
+		    rightArm = root.getChild("right_arm");
+		</#if>
+		if (leftArm != null || rightArm != null) {
+			Minecraft mc = Minecraft.getInstance();
+			AbstractClientPlayer player = mc.player;
+			PlayerRenderer playerRenderer = (PlayerRenderer) mc.getEntityRenderDispatcher().getRenderer(player);
+			PlayerModel<?> playerModel = playerRenderer.getModel();
+			ResourceLocation skinTexture = player.getSkin().texture();
+			if (!player.isInvisible()) {
+				renderArm(leftArm, playerModel, skinTexture, bufferSource, poseStack, packedLight, true, <#if data.hasCustomJAVAModel() && data.animations?has_content>isFirstPerson<#else>displayContext == ItemDisplayContext.FIRST_PERSON_LEFT_HAND || displayContext == ItemDisplayContext.FIRST_PERSON_RIGHT_HAND</#if>);
+				renderArm(rightArm, playerModel, skinTexture, bufferSource, poseStack, packedLight, false, <#if data.hasCustomJAVAModel() && data.animations?has_content>isFirstPerson<#else>displayContext == ItemDisplayContext.FIRST_PERSON_LEFT_HAND || displayContext == ItemDisplayContext.FIRST_PERSON_RIGHT_HAND</#if>);
+			}
+		}
+		model.renderToBuffer(poseStack, ItemRenderer.getFoilBufferDirect(bufferSource, model.renderType(texture), false, itemstack.hasFoil()), packedLight, packedOverlay);
 		poseStack.popPose();
+	}
+
+	private void renderArm(ModelPart arm, PlayerModel model, ResourceLocation skin, MultiBufferSource bufferSource, PoseStack poseStack, int packedLight, boolean left, boolean firstPerson) {
+		if (arm != null && firstPerson) {
+			ModelPart playerArm = left ? model.leftArm : model.rightArm;
+			ModelPart playerSleeve = left ? model.leftSleeve : model.rightSleeve;
+			playerArm.loadPose(arm.storePose());
+			playerSleeve.loadPose(arm.storePose());
+			playerArm.xRot += (float) Math.PI;
+			playerSleeve.xRot += (float) Math.PI;
+			playerArm.render(poseStack, bufferSource.getBuffer(RenderType.entityTranslucent(skin)), packedLight, OverlayTexture.NO_OVERLAY);
+			playerSleeve.render(poseStack, bufferSource.getBuffer(RenderType.entityTranslucent(skin)), packedLight, OverlayTexture.NO_OVERLAY);
+		}
+		if (arm != null)
+		    arm.visible = false;
 	}
 
 	private static boolean isLeftHand(ItemDisplayContext type) {
@@ -140,7 +185,7 @@ package ${package}.client.renderer.item;
 
 		private final ModelPart root;
 
-		private final BlockEntityHierarchicalModel animator = new BlockEntityHierarchicalModel();
+		public final BlockEntityHierarchicalModel animator = new BlockEntityHierarchicalModel();
 
 		public AnimatedModel(ModelPart root) {
 			super(root);
