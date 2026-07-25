@@ -280,12 +280,16 @@ public class Launcher extends JavaPlugin {
 								Gson gson = new Gson();
 								JsonObject customModelJson = gson.fromJson(reader, JsonObject.class);
 
-								if (customModelJson != null && customModelJson.has("display") && customModelJson.get("display").isJsonObject()) {
-									JsonObject displaySettings = customModelJson.getAsJsonObject("display");
-									JsonObject itemJson = gson.fromJson(event.getTemplateOutput(), JsonObject.class);
-									itemJson.add("display", displaySettings);
-									event.setTemplateOutput(gson.toJson(itemJson));
-								}
+                                if (customModelJson != null && customModelJson.has("display") && customModelJson.get("display").isJsonObject()) {
+                                    JsonObject displaySettings = customModelJson.getAsJsonObject("display");
+                                    JsonObject itemJson = gson.fromJson(event.getTemplateOutput(), JsonObject.class);
+                                    if (itemJson.has("base") && itemJson.get("base").isJsonObject()) {
+                                        itemJson.getAsJsonObject("base").add("display", displaySettings);
+                                    } else {
+                                        itemJson.add("display", displaySettings);
+                                    }
+                                    event.setTemplateOutput(gson.toJson(itemJson));
+                                }
 							} catch (Exception e) {
 								LOG.error("Better Animations: Error processing custom JSON model for item: {}", itemName, e);
 							}

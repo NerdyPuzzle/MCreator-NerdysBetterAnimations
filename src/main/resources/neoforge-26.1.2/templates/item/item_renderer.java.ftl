@@ -103,24 +103,18 @@ package ${package}.client.renderer.item;
 		</#if>
 		model.setupAnim(renderState);
 
-		ModelPart leftArm = null;
-		ModelPart rightArm = null;
+		<#if data.hasCustomJAVAModel() && data.animations?has_content>
 		ModelPart root = model.root();
-		if (root.hasChild("left_arm"))
-		    leftArm = root.getChild("left_arm");
-		if (root.hasChild("right_arm"))
-		    rightArm = root.getChild("right_arm");
-		if (leftArm != null || rightArm != null) {
-			Minecraft mc = Minecraft.getInstance();
-			AbstractClientPlayer player = mc.player;
-			AvatarRenderer playerRenderer = (AvatarRenderer) mc.getEntityRenderDispatcher().getRenderer(player);
-			PlayerModel playerModel = (PlayerModel) playerRenderer.getModel();
-			Identifier skinTexture = player.getSkin().body().texturePath();
-			if (!player.isInvisible()) {
-				renderArm(leftArm, playerModel, skinTexture, submitNodeCollector, poseStack, lightCoords, true, <#if data.hasCustomJAVAModel() && data.animations?has_content>isFirstPerson<#else>displayContext == ItemDisplayContext.FIRST_PERSON_LEFT_HAND || displayContext == ItemDisplayContext.FIRST_PERSON_RIGHT_HAND</#if>);
-				renderArm(rightArm, playerModel, skinTexture, submitNodeCollector, poseStack, lightCoords, false, <#if data.hasCustomJAVAModel() && data.animations?has_content>isFirstPerson<#else>displayContext == ItemDisplayContext.FIRST_PERSON_LEFT_HAND || displayContext == ItemDisplayContext.FIRST_PERSON_RIGHT_HAND</#if>);
-			}
+		Minecraft mc = Minecraft.getInstance();
+		AbstractClientPlayer player = mc.player;
+		AvatarRenderer playerRenderer = (AvatarRenderer) mc.getEntityRenderDispatcher().getRenderer(player);
+		PlayerModel playerModel = (PlayerModel) playerRenderer.getModel();
+		Identifier skinTexture = player.getSkin().body().texturePath();
+		if (!player.isInvisible()) {
+			searchAndRenderArm(root, "left_arm", playerModel, skinTexture, submitNodeCollector, poseStack, lightCoords, true, isFirstPerson);
+			searchAndRenderArm(root, "right_arm", playerModel, skinTexture, submitNodeCollector, poseStack, lightCoords, false, isFirstPerson);
 		}
+		</#if>
 
 		submitNodeCollector.submitModel(this.model, renderState, poseStack, texture, lightCoords, overlayCoords, outlineColor, null);
 
@@ -131,17 +125,41 @@ package ${package}.client.renderer.item;
 		poseStack.popPose();
 	}
 
-	private void renderArm(ModelPart arm, PlayerModel model, Identifier skin, SubmitNodeCollector collector, PoseStack poseStack, int packedLight, boolean left, boolean firstPerson) {
-		if (arm != null && firstPerson) {
-			ModelPart playerArm = left ? model.leftArm : model.rightArm;
-			playerArm.loadPose(arm.storePose());
-			playerArm.xRot += (float) Math.PI;
+    <#if data.hasCustomJAVAModel() && data.animations?has_content>
+	private void searchAndRenderArm(ModelPart root, String armName, PlayerModel playerModel, Identifier skinTexture, SubmitNodeCollector collector, PoseStack poseStack, int packedLight, boolean left, boolean firstPerson) {
+		List<ModelPart> parentChain = findParentChain(root, armName);
+		if (parentChain != null) {
+			ModelPart arm = parentChain.get(parentChain.size() - 1).getChild(armName);
+			if (firstPerson) {
+				poseStack.pushPose();
+				for (ModelPart parent : parentChain) {
+					parent.translateAndRotate(poseStack);
+				}
+				ModelPart playerArm = left ? playerModel.leftArm : playerModel.rightArm;
+				playerArm.loadPose(arm.storePose());
+				collector.submitModelPart(playerArm, poseStack, RenderTypes.entityTranslucent(skinTexture), packedLight, OverlayTexture.NO_OVERLAY, null);
+				poseStack.popPose();
+			}
 			arm.visible = false;
-			collector.submitModelPart(playerArm, poseStack, RenderTypes.entityTranslucent(skin), packedLight, OverlayTexture.NO_OVERLAY, null);
 		}
-		if (arm != null)
-		    arm.visible = false;
 	}
+
+	private List<ModelPart> findParentChain(ModelPart current, String targetName) {
+		if (current.hasChild(targetName)) {
+			List<ModelPart> chain = new ArrayList<>();
+			chain.add(current);
+			return chain;
+		}
+		for (ModelPart child : current.children.values()) {
+			List<ModelPart> childChain = findParentChain(child, targetName);
+			if (childChain != null) {
+				childChain.add(0, current);
+				return childChain;
+			}
+		}
+		return null;
+	}
+	</#if>
 
 	@Override public ItemStack extractArgument(ItemStack itemstack) {
 		return itemstack;

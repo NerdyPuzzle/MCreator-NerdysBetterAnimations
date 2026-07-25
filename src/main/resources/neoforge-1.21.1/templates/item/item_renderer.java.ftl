@@ -98,55 +98,60 @@ package ${package}.client.renderer.item;
 		else
 		</#if>
 		model.setupAnim(null, 0, 0, (System.currentTimeMillis() - start) / 50.0f, 0, 0);
-		ModelPart leftArm = null;
-		ModelPart rightArm = null;
-		<#if !(data.hasCustomJAVAModel() && data.animations?has_content)>
-		try {
-			Field leftField = model.getClass().getDeclaredField("left_arm");
-			leftField.setAccessible(true);
-			leftArm = (ModelPart) leftField.get(model);
-		} catch (Exception e) {}
-		try {
-			Field rightField = model.getClass().getDeclaredField("right_arm");
-			rightField.setAccessible(true);
-			rightArm = (ModelPart) rightField.get(model);
-		} catch (Exception e) {}
-		<#else>
+		<#if data.hasCustomJAVAModel() && data.animations?has_content>
 		ModelPart root = ((AnimatedModel)model).animator.root();
-		if (root.hasChild("left_arm"))
-		    leftArm = root.getChild("left_arm");
-		if (root.hasChild("right_arm"))
-		    rightArm = root.getChild("right_arm");
-		</#if>
-		if (leftArm != null || rightArm != null) {
-			Minecraft mc = Minecraft.getInstance();
-			AbstractClientPlayer player = mc.player;
-			PlayerRenderer playerRenderer = (PlayerRenderer) mc.getEntityRenderDispatcher().getRenderer(player);
-			PlayerModel<?> playerModel = playerRenderer.getModel();
-			ResourceLocation skinTexture = player.getSkin().texture();
-			if (!player.isInvisible()) {
-				renderArm(leftArm, playerModel, skinTexture, bufferSource, poseStack, packedLight, true, <#if data.hasCustomJAVAModel() && data.animations?has_content>isFirstPerson<#else>displayContext == ItemDisplayContext.FIRST_PERSON_LEFT_HAND || displayContext == ItemDisplayContext.FIRST_PERSON_RIGHT_HAND</#if>);
-				renderArm(rightArm, playerModel, skinTexture, bufferSource, poseStack, packedLight, false, <#if data.hasCustomJAVAModel() && data.animations?has_content>isFirstPerson<#else>displayContext == ItemDisplayContext.FIRST_PERSON_LEFT_HAND || displayContext == ItemDisplayContext.FIRST_PERSON_RIGHT_HAND</#if>);
-			}
+		Minecraft mc = Minecraft.getInstance();
+		AbstractClientPlayer player = mc.player;
+		PlayerRenderer playerRenderer = (PlayerRenderer) mc.getEntityRenderDispatcher().getRenderer(player);
+		PlayerModel<?> playerModel = playerRenderer.getModel();
+		ResourceLocation skinTexture = player.getSkin().texture();
+		if (!player.isInvisible()) {
+			searchAndRenderArm(root, "left_arm", playerModel, skinTexture, bufferSource, poseStack, packedLight, true, isFirstPerson);
+			searchAndRenderArm(root, "right_arm", playerModel, skinTexture, bufferSource, poseStack, packedLight, false, isFirstPerson);
 		}
+		</#if>
 		model.renderToBuffer(poseStack, ItemRenderer.getFoilBufferDirect(bufferSource, model.renderType(texture), false, itemstack.hasFoil()), packedLight, packedOverlay);
 		poseStack.popPose();
 	}
 
-	private void renderArm(ModelPart arm, PlayerModel model, ResourceLocation skin, MultiBufferSource bufferSource, PoseStack poseStack, int packedLight, boolean left, boolean firstPerson) {
-		if (arm != null && firstPerson) {
-			ModelPart playerArm = left ? model.leftArm : model.rightArm;
-			ModelPart playerSleeve = left ? model.leftSleeve : model.rightSleeve;
-			playerArm.loadPose(arm.storePose());
-			playerSleeve.loadPose(arm.storePose());
-			playerArm.xRot += (float) Math.PI;
-			playerSleeve.xRot += (float) Math.PI;
-			playerArm.render(poseStack, bufferSource.getBuffer(RenderType.entityTranslucent(skin)), packedLight, OverlayTexture.NO_OVERLAY);
-			playerSleeve.render(poseStack, bufferSource.getBuffer(RenderType.entityTranslucent(skin)), packedLight, OverlayTexture.NO_OVERLAY);
+    <#if data.hasCustomJAVAModel() && data.animations?has_content>
+	private void searchAndRenderArm(ModelPart root, String armName, PlayerModel playerModel, ResourceLocation skinTexture, MultiBufferSource bufferSource, PoseStack poseStack, int packedLight, boolean left, boolean firstPerson) {
+		List<ModelPart> parentChain = findParentChain(root, armName);
+		if (parentChain != null) {
+			ModelPart arm = parentChain.get(parentChain.size() - 1).getChild(armName);
+			if (firstPerson) {
+				poseStack.pushPose();
+				for (ModelPart parent : parentChain) {
+					parent.translateAndRotate(poseStack);
+				}
+				ModelPart playerArm = left ? playerModel.leftArm : playerModel.rightArm;
+				ModelPart playerSleeve = left ? playerModel.leftSleeve : playerModel.rightSleeve;
+				playerArm.loadPose(arm.storePose());
+				playerSleeve.loadPose(arm.storePose());
+				playerArm.render(poseStack, bufferSource.getBuffer(RenderType.entityTranslucent(skinTexture)), packedLight, OverlayTexture.NO_OVERLAY);
+				playerSleeve.render(poseStack, bufferSource.getBuffer(RenderType.entityTranslucent(skinTexture)), packedLight, OverlayTexture.NO_OVERLAY);
+				poseStack.popPose();
+			}
+			arm.visible = false;
 		}
-		if (arm != null)
-		    arm.visible = false;
 	}
+
+	private List<ModelPart> findParentChain(ModelPart current, String targetName) {
+		if (current.hasChild(targetName)) {
+			List<ModelPart> chain = new ArrayList<>();
+			chain.add(current);
+			return chain;
+		}
+		for (ModelPart child : current.children.values()) {
+			List<ModelPart> childChain = findParentChain(child, targetName);
+			if (childChain != null) {
+				childChain.add(0, current);
+				return childChain;
+			}
+		}
+		return null;
+	}
+	</#if>
 
 	private static boolean isLeftHand(ItemDisplayContext type) {
 		return type == ItemDisplayContext.FIRST_PERSON_LEFT_HAND || type == ItemDisplayContext.THIRD_PERSON_LEFT_HAND;
