@@ -203,6 +203,9 @@ package ${package}.client.renderer.item;
 
 	private void updateRenderState(ItemStack itemstack) {
 		int tickCount = (int) (System.currentTimeMillis() - start) / 50;
+	    <#if data.animations?size != 0>
+	        updateAnimation(itemstack, tickCount);
+	    </#if>
 		<#list data.animations as animation>
 			<#if hasProcedure(animation.condition)>
 				getAnimationState(itemstack).get(${animation?index}).animateWhen(<@procedureCode animation.condition, {
@@ -214,10 +217,44 @@ package ${package}.client.renderer.item;
 				"world": "Minecraft.getInstance().level"
 				}, false/>, tickCount);
 			<#else>
-				getAnimationState(itemstack).get(${animation?index}).animateWhen(true, tickCount);
+				if (getAnimationState(itemstack).get(${animation?index}).isStarted()) {
+					float elapsedSeconds = getAnimationState(itemstack).get(${animation?index}).getTimeInMillis(tickCount) / 1000.0F;
+					if (elapsedSeconds >= ${animation.animation}.lengthInSeconds()) {
+						if (!${animation.animation}.looping())
+							getAnimationState(itemstack).get(${animation?index}).stop();
+						else
+							getAnimationState(itemstack).get(${animation?index}).start(tickCount);
+					}
+				}
 			</#if>
 		</#list>
 	}
+
+	<#if data.animations?size != 0>
+	private void updateAnimation(ItemStack itemstack, int tickCount) {
+		Minecraft mc = Minecraft.getInstance();
+		CompoundTag data = itemstack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
+		int elapsedTicks = (int) (mc.level.getGameTime() - data.getLongOr("animTime", 0));
+		switch (data.getIntOr("animState", 420)) {
+			<#list data.animations as animation>
+			case -${animation?index + 1}:
+				getAnimationState(itemstack).get(${animation?index}).stop();
+				break;
+			</#list>
+			<#list data.animations as animation>
+			case ${animation?index}:
+				AnimationState state = getAnimationState(itemstack).get(${animation?index});
+				float maxDurationTicks = ${animation.animation}.lengthInSeconds() * 20f;
+				if (elapsedTicks >= 0 && elapsedTicks < maxDurationTicks) {
+					if (!state.isStarted()) {
+						state.start(tickCount);
+					}
+				}
+				break;
+			</#list>
+		}
+	}
+	</#if>
 
 	private static final class AnimatedModel extends ${data.customModelName.split(":")[0]} {
 
