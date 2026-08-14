@@ -17,6 +17,19 @@ public-f net.minecraft.world.level.levelgen.feature.TreeFeature place(Lnet/minec
 public-f net.minecraft.client.model.Model renderToBuffer(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;III)V
 </#if>
 
+<#if w.hasElementsOfType("fluid")>
+public net.minecraft.world.entity.LivingEntity travelInWater(Lnet/minecraft/world/phys/Vec3;DZD)V
+public net.minecraft.world.entity.LivingEntity travelInLava(Lnet/minecraft/world/phys/Vec3;DZD)V
+public net.minecraft.world.entity.animal.axolotl.Axolotl travelInWater(Lnet/minecraft/world/phys/Vec3;DZD)V
+public net.minecraft.world.entity.animal.dolphin.Dolphin travelInWater(Lnet/minecraft/world/phys/Vec3;DZD)V
+public net.minecraft.world.entity.animal.fish.AbstractFish travelInWater(Lnet/minecraft/world/phys/Vec3;DZD)V
+public net.minecraft.world.entity.animal.frog.Frog travelInWater(Lnet/minecraft/world/phys/Vec3;DZD)V
+public net.minecraft.world.entity.animal.nautilus.AbstractNautilus travelInWater(Lnet/minecraft/world/phys/Vec3;DZD)V
+public net.minecraft.world.entity.animal.turtle.Turtle travelInWater(Lnet/minecraft/world/phys/Vec3;DZD)V
+public net.minecraft.world.entity.monster.Guardian travelInWater(Lnet/minecraft/world/phys/Vec3;DZD)V
+public net.minecraft.world.entity.monster.zombie.Drowned travelInWater(Lnet/minecraft/world/phys/Vec3;DZD)V
+</#if>
+
 public net.minecraft.client.renderer.entity.player.AvatarRenderer setupRotations(Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;FF)V
 public net.minecraft.client.model.player.PlayerModel slim
 public-f net.minecraft.client.model.geom.ModelPart children
