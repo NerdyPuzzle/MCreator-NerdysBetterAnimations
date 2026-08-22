@@ -210,11 +210,13 @@ package ${package}.client.renderer.item;
 			</#list>
 			<#list data.animations as animation>
 			case ${animation?index}:
-				AnimationState state = getAnimationState(itemstack).get(${animation?index});
-				float maxDurationTicks = ${animation.animation}.lengthInSeconds() * 20f;
-				if (elapsedTicks >= 0 && elapsedTicks < maxDurationTicks) {
-					if (!state.isStarted()) {
-						state.start(tickCount);
+			    {
+					AnimationState state = getAnimationState(itemstack).get(${animation?index});
+					float maxDurationTicks = ${animation.animation}.lengthInSeconds() * 20f;
+					if (elapsedTicks >= 0 && elapsedTicks < maxDurationTicks) {
+						if (!state.isStarted()) {
+							state.start(tickCount);
+						}
 					}
 				}
 				break;
