@@ -40,7 +40,6 @@ package ${package}.client.renderer.item;
 	private final ItemStack transformSource;
 
 	private final Map<Integer, EntityModel<?>> models = new HashMap<>();
-	private final long start;
 
 	private final ResourceLocation DEFAULT_TEXTURE = ResourceLocation.parse("${data.texture.format("%s:textures/item/%s")}.png");
 
@@ -48,8 +47,6 @@ package ${package}.client.renderer.item;
 		super(blockEntityRenderDispatcher, entityModelSet);
 		this.entityModelSet = entityModelSet;
 		this.transformSource = new ItemStack(${JavaModName}Items.${REGISTRYNAME}.get());
-
-		this.start = System.currentTimeMillis();
 
 		<#if data.hasCustomJAVAModel()>
 			<#if data.animations?has_content>
@@ -66,6 +63,11 @@ package ${package}.client.renderer.item;
 	}
 
 	@Override public void renderByItem(ItemStack itemstack, ItemDisplayContext displayContext, PoseStack poseStack, MultiBufferSource bufferSource, int packedLight, int packedOverlay) {
+		Minecraft mc = Minecraft.getInstance();
+
+		if (mc.level == null)
+		    return;
+
 		<#if data.hasCustomJAVAModel() && data.animations?has_content>
 		updateRenderState(itemstack);
 		</#if>
@@ -90,17 +92,17 @@ package ${package}.client.renderer.item;
 		poseStack.scale(1, -1, displayContext == ItemDisplayContext.GUI ? -1 : 1);
 		poseStack.mulPose(Axis.YP.rotationDegrees(displayContext == ItemDisplayContext.GUI ? 180f : 0));
 		poseStack.scale(-1, 1, 1);
+		float ageInTicks = (float) mc.level.getGameTime() + mc.getTimer().getGameTimeDeltaPartialTick(false);
 		<#if data.hasCustomJAVAModel() && data.animations?has_content>
 		boolean isFirstPerson = displayContext == ItemDisplayContext.FIRST_PERSON_LEFT_HAND || displayContext == ItemDisplayContext.FIRST_PERSON_RIGHT_HAND;
 		boolean isThirdPerson = displayContext == ItemDisplayContext.THIRD_PERSON_LEFT_HAND || displayContext == ItemDisplayContext.THIRD_PERSON_RIGHT_HAND;
 		if (model instanceof AnimatedModel animatedModel/*@perspective*/)
-			animatedModel.setupItemStackAnim(itemstack, (System.currentTimeMillis() - start) / 50.0f);
+			animatedModel.setupItemStackAnim(itemstack, ageInTicks);
 		else
 		</#if>
-		model.setupAnim(null, 0, 0, (System.currentTimeMillis() - start) / 50.0f, 0, 0);
+		model.setupAnim(null, 0, 0, ageInTicks, 0, 0);
 		<#if data.hasCustomJAVAModel() && data.animations?has_content>
 		ModelPart root = ((AnimatedModel)model).animator.root();
-		Minecraft mc = Minecraft.getInstance();
 		AbstractClientPlayer player = mc.player;
 		PlayerRenderer playerRenderer = (PlayerRenderer) mc.getEntityRenderDispatcher().getRenderer(player);
 		PlayerModel<?> playerModel = playerRenderer.getModel();
@@ -169,7 +171,12 @@ package ${package}.client.renderer.item;
 	}
 
 	private void updateRenderState(ItemStack itemstack) {
-		int tickCount = (int) (System.currentTimeMillis() - start) / 50;
+	    Minecraft mc = Minecraft.getInstance();
+
+	    if (mc.level == null)
+	        return;
+
+		int tickCount = (int) mc.level.getGameTime();
 	    <#if data.animations?size != 0>
 	        updateAnimation(itemstack, tickCount);
 	    </#if>
@@ -177,11 +184,11 @@ package ${package}.client.renderer.item;
 			<#if hasProcedure(animation.condition)>
 				getAnimationState(itemstack).get(${animation?index}).animateWhen(<@procedureCode animation.condition, {
 					"itemstack": "itemstack",
-					"x": "Minecraft.getInstance().player.getX()",
-					"y": "Minecraft.getInstance().player.getY()",
-					"z": "Minecraft.getInstance().player.getZ()",
-					"entity": "Minecraft.getInstance().player",
-					"world": "Minecraft.getInstance().level"
+					"x": "mc.player.getX()",
+					"y": "mc.player.getY()",
+					"z": "mc.player.getZ()",
+					"entity": "mc.player",
+					"world": "mc.level"
 				}, false/>, tickCount);
 			<#else>
 				if (getAnimationState(itemstack).get(${animation?index}).isStarted()) {
@@ -200,6 +207,10 @@ package ${package}.client.renderer.item;
 	<#if data.animations?size != 0>
 	private void updateAnimation(ItemStack itemstack, int tickCount) {
 		Minecraft mc = Minecraft.getInstance();
+
+		if (mc.level == null)
+		    return;
+
 		CompoundTag data = itemstack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
 		int elapsedTicks = (int) (mc.level.getGameTime() - data.getLong("animTime"));
 		switch (data.getInt("animState")) {

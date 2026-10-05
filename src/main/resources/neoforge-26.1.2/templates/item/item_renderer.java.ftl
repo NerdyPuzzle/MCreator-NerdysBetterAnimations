@@ -73,17 +73,20 @@ package ${package}.client.renderer.item;
 	private final ItemDisplayContext displayContext;
 
 	private final LivingEntityRenderState renderState;
-	private final long start;
 
 	private ${name}ItemRenderer(EntityModel<LivingEntityRenderState> model, Identifier texture, ItemDisplayContext displayContext) {
 		this.model = model;
 		this.texture = texture;
 		this.displayContext = displayContext;
 		this.renderState = new LivingEntityRenderState();
-		this.start = System.currentTimeMillis();
 	}
 
 	@Override public void submit(ItemStack itemstack, PoseStack poseStack, SubmitNodeCollector submitNodeCollector, int lightCoords, int overlayCoords, boolean glint, int outlineColor) {
+		Minecraft mc = Minecraft.getInstance();
+
+		if (mc.level == null)
+		    return;
+
 		<#if data.hasCustomJAVAModel() && data.animations?has_content>
 		updateRenderState(itemstack);
 		</#if>
@@ -93,7 +96,7 @@ package ${package}.client.renderer.item;
 		poseStack.scale(1, -1, displayContext == ItemDisplayContext.GUI ? -1 : 1);
 		poseStack.mulPose(Axis.YP.rotationDegrees(displayContext == ItemDisplayContext.GUI ? 180f : 0));
 		poseStack.scale(-1, 1, 1);
-		renderState.ageInTicks = (System.currentTimeMillis() - start) / 50.0f;
+		renderState.ageInTicks = (float) mc.level.getGameTime() + mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
 		<#if data.hasCustomJAVAModel() && data.animations?has_content>
 		boolean isFirstPerson = displayContext == ItemDisplayContext.FIRST_PERSON_LEFT_HAND || displayContext == ItemDisplayContext.FIRST_PERSON_RIGHT_HAND;
 		boolean isThirdPerson = displayContext == ItemDisplayContext.THIRD_PERSON_LEFT_HAND || displayContext == ItemDisplayContext.THIRD_PERSON_RIGHT_HAND;
@@ -105,7 +108,6 @@ package ${package}.client.renderer.item;
 
 		<#if data.hasCustomJAVAModel() && data.animations?has_content>
 		ModelPart root = model.root();
-		Minecraft mc = Minecraft.getInstance();
 		AbstractClientPlayer player = mc.player;
 		AvatarRenderer playerRenderer = (AvatarRenderer) mc.getEntityRenderDispatcher().getRenderer(player);
 		PlayerModel playerModel = (PlayerModel) playerRenderer.getModel();
@@ -202,7 +204,12 @@ package ${package}.client.renderer.item;
 	}
 
 	private void updateRenderState(ItemStack itemstack) {
-		int tickCount = (int) (System.currentTimeMillis() - start) / 50;
+		Minecraft mc = Minecraft.getInstance();
+
+		if (mc.level == null)
+		    return;
+
+		int tickCount = (int) mc.level.getGameTime();
 	    <#if data.animations?size != 0>
 	        updateAnimation(itemstack, tickCount);
 	    </#if>
@@ -210,11 +217,11 @@ package ${package}.client.renderer.item;
 			<#if hasProcedure(animation.condition)>
 				getAnimationState(itemstack).get(${animation?index}).animateWhen(<@procedureCode animation.condition, {
 				"itemstack": "itemstack",
-				"x": "Minecraft.getInstance().player.getX()",
-				"y": "Minecraft.getInstance().player.getY()",
-				"z": "Minecraft.getInstance().player.getZ()",
-				"entity": "Minecraft.getInstance().player",
-				"world": "Minecraft.getInstance().level"
+				"x": "mc.player.getX()",
+				"y": "mc.player.getY()",
+				"z": "mc.player.getZ()",
+				"entity": "mc.player",
+				"world": "mc.level"
 				}, false/>, tickCount);
 			<#else>
 				if (getAnimationState(itemstack).get(${animation?index}).isStarted()) {
@@ -233,6 +240,10 @@ package ${package}.client.renderer.item;
 	<#if data.animations?size != 0>
 	private void updateAnimation(ItemStack itemstack, int tickCount) {
 		Minecraft mc = Minecraft.getInstance();
+
+		if (mc.level == null)
+		    return;
+
 		CompoundTag data = itemstack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
 		int elapsedTicks = (int) (mc.level.getGameTime() - data.getLongOr("animTime", 0));
 		switch (data.getIntOr("animState", 420)) {
