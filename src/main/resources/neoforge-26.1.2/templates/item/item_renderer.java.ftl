@@ -73,6 +73,7 @@ package ${package}.client.renderer.item;
 	private final ItemDisplayContext displayContext;
 
 	private final LivingEntityRenderState renderState;
+	private long previousTime = -1;
 	private long start = -1;
 
 	private ${name}ItemRenderer(EntityModel<LivingEntityRenderState> model, Identifier texture, ItemDisplayContext displayContext) {
@@ -88,8 +89,10 @@ package ${package}.client.renderer.item;
 		if (mc.level == null)
 		    return;
 
-		if (this.start == -1)
-		    this.start = mc.level.getGameTime();
+		long gameTime = mc.level.getGameTime();
+		if (this.start == -1 || Math.abs(gameTime - previousTime) > 100)
+			this.start = gameTime;
+		this.previousTime = gameTime;
 
 		<#if data.hasCustomJAVAModel() && data.animations?has_content>
 		updateRenderState(itemstack);
@@ -100,7 +103,7 @@ package ${package}.client.renderer.item;
 		poseStack.scale(1, -1, displayContext == ItemDisplayContext.GUI ? -1 : 1);
 		poseStack.mulPose(Axis.YP.rotationDegrees(displayContext == ItemDisplayContext.GUI ? 180f : 0));
 		poseStack.scale(-1, 1, 1);
-		renderState.ageInTicks = (mc.level.getGameTime() - start) + mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
+		renderState.ageInTicks = (gameTime - start) + mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
 		<#if data.hasCustomJAVAModel() && data.animations?has_content>
 		boolean isFirstPerson = displayContext == ItemDisplayContext.FIRST_PERSON_LEFT_HAND || displayContext == ItemDisplayContext.FIRST_PERSON_RIGHT_HAND;
 		boolean isThirdPerson = displayContext == ItemDisplayContext.THIRD_PERSON_LEFT_HAND || displayContext == ItemDisplayContext.THIRD_PERSON_RIGHT_HAND;
