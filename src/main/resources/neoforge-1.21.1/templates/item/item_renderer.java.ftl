@@ -38,6 +38,7 @@ package ${package}.client.renderer.item;
 
 	private final EntityModelSet entityModelSet;
 	private final ItemStack transformSource;
+	private long start = -1;
 
 	private final Map<Integer, EntityModel<?>> models = new HashMap<>();
 
@@ -64,6 +65,9 @@ package ${package}.client.renderer.item;
 
 	@Override public void renderByItem(ItemStack itemstack, ItemDisplayContext displayContext, PoseStack poseStack, MultiBufferSource bufferSource, int packedLight, int packedOverlay) {
 		Minecraft mc = Minecraft.getInstance();
+
+		if (start == -1)
+		    this.start = mc.level.getGameTime();
 
 		if (mc.level == null)
 		    return;
@@ -92,7 +96,7 @@ package ${package}.client.renderer.item;
 		poseStack.scale(1, -1, displayContext == ItemDisplayContext.GUI ? -1 : 1);
 		poseStack.mulPose(Axis.YP.rotationDegrees(displayContext == ItemDisplayContext.GUI ? 180f : 0));
 		poseStack.scale(-1, 1, 1);
-		float ageInTicks = (float) mc.level.getGameTime() + mc.getTimer().getGameTimeDeltaPartialTick(false);
+		float ageInTicks = (mc.level.getGameTime() - start) + mc.getTimer().getGameTimeDeltaPartialTick(false);
 		<#if data.hasCustomJAVAModel() && data.animations?has_content>
 		boolean isFirstPerson = displayContext == ItemDisplayContext.FIRST_PERSON_LEFT_HAND || displayContext == ItemDisplayContext.FIRST_PERSON_RIGHT_HAND;
 		boolean isThirdPerson = displayContext == ItemDisplayContext.THIRD_PERSON_LEFT_HAND || displayContext == ItemDisplayContext.THIRD_PERSON_RIGHT_HAND;
@@ -176,7 +180,7 @@ package ${package}.client.renderer.item;
 	    if (mc.level == null)
 	        return;
 
-		int tickCount = (int) mc.level.getGameTime();
+		int tickCount = (int) (mc.level.getGameTime() - start);
 	    <#if data.animations?size != 0>
 	        updateAnimation(itemstack, tickCount);
 	    </#if>
