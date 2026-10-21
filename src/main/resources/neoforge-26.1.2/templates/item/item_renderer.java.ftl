@@ -73,8 +73,7 @@ package ${package}.client.renderer.item;
 	private final ItemDisplayContext displayContext;
 
 	private final LivingEntityRenderState renderState;
-	private long previousTime = -1;
-	private long start = -1;
+	private static final Map<Level, Long> start = new WeakHashMap<>();
 
 	private ${name}ItemRenderer(EntityModel<LivingEntityRenderState> model, Identifier texture, ItemDisplayContext displayContext) {
 		this.model = model;
@@ -86,14 +85,6 @@ package ${package}.client.renderer.item;
 	@Override public void submit(ItemStack itemstack, PoseStack poseStack, SubmitNodeCollector submitNodeCollector, int lightCoords, int overlayCoords, boolean glint, int outlineColor) {
 		Minecraft mc = Minecraft.getInstance();
 
-		if (mc.level == null)
-		    return;
-
-		long gameTime = mc.level.getGameTime();
-		if (this.start == -1 || Math.abs(gameTime - previousTime) > 100)
-			this.start = gameTime;
-		this.previousTime = gameTime;
-
 		<#if data.hasCustomJAVAModel() && data.animations?has_content>
 		updateRenderState(itemstack);
 		</#if>
@@ -103,7 +94,7 @@ package ${package}.client.renderer.item;
 		poseStack.scale(1, -1, displayContext == ItemDisplayContext.GUI ? -1 : 1);
 		poseStack.mulPose(Axis.YP.rotationDegrees(displayContext == ItemDisplayContext.GUI ? 180f : 0));
 		poseStack.scale(-1, 1, 1);
-		renderState.ageInTicks = (gameTime - start) + mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
+		renderState.ageInTicks = (mc.level.getGameTime() - start.computeIfAbsent(mc.level, Level::getGameTime)) + mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
 		<#if data.hasCustomJAVAModel() && data.animations?has_content>
 		boolean isFirstPerson = displayContext == ItemDisplayContext.FIRST_PERSON_LEFT_HAND || displayContext == ItemDisplayContext.FIRST_PERSON_RIGHT_HAND;
 		boolean isThirdPerson = displayContext == ItemDisplayContext.THIRD_PERSON_LEFT_HAND || displayContext == ItemDisplayContext.THIRD_PERSON_RIGHT_HAND;
@@ -213,10 +204,7 @@ package ${package}.client.renderer.item;
 	private void updateRenderState(ItemStack itemstack) {
 		Minecraft mc = Minecraft.getInstance();
 
-		if (mc.level == null)
-		    return;
-
-		int tickCount = (int) (mc.level.getGameTime() - start);
+		int tickCount = (int) (mc.level.getGameTime() - start.computeIfAbsent(mc.level, Level::getGameTime));
 	    <#if data.animations?size != 0>
 	        updateAnimation(itemstack, tickCount);
 	    </#if>

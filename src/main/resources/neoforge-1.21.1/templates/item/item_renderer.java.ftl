@@ -38,8 +38,7 @@ package ${package}.client.renderer.item;
 
 	private final EntityModelSet entityModelSet;
 	private final ItemStack transformSource;
-	private long previousTime = -1;
-	private long start = -1;
+	private final Map<Level, Long> start = new WeakHashMap<>();
 
 	private final Map<Integer, EntityModel<?>> models = new HashMap<>();
 
@@ -67,14 +66,6 @@ package ${package}.client.renderer.item;
 	@Override public void renderByItem(ItemStack itemstack, ItemDisplayContext displayContext, PoseStack poseStack, MultiBufferSource bufferSource, int packedLight, int packedOverlay) {
 		Minecraft mc = Minecraft.getInstance();
 
-		long gameTime = mc.level.getGameTime();
-		if (this.start == -1 || Math.abs(gameTime - previousTime) > 100)
-			this.start = gameTime;
-		this.previousTime = gameTime;
-
-		if (mc.level == null)
-		    return;
-
 		<#if data.hasCustomJAVAModel() && data.animations?has_content>
 		updateRenderState(itemstack);
 		</#if>
@@ -99,7 +90,7 @@ package ${package}.client.renderer.item;
 		poseStack.scale(1, -1, displayContext == ItemDisplayContext.GUI ? -1 : 1);
 		poseStack.mulPose(Axis.YP.rotationDegrees(displayContext == ItemDisplayContext.GUI ? 180f : 0));
 		poseStack.scale(-1, 1, 1);
-		float ageInTicks = (gameTime - start) + mc.getTimer().getGameTimeDeltaPartialTick(false);
+		float ageInTicks = (mc.level.getGameTime() - start.computeIfAbsent(mc.level, Level::getGameTime)) + mc.getTimer().getGameTimeDeltaPartialTick(false);
 		<#if data.hasCustomJAVAModel() && data.animations?has_content>
 		boolean isFirstPerson = displayContext == ItemDisplayContext.FIRST_PERSON_LEFT_HAND || displayContext == ItemDisplayContext.FIRST_PERSON_RIGHT_HAND;
 		boolean isThirdPerson = displayContext == ItemDisplayContext.THIRD_PERSON_LEFT_HAND || displayContext == ItemDisplayContext.THIRD_PERSON_RIGHT_HAND;
@@ -180,10 +171,7 @@ package ${package}.client.renderer.item;
 	private void updateRenderState(ItemStack itemstack) {
 	    Minecraft mc = Minecraft.getInstance();
 
-	    if (mc.level == null)
-	        return;
-
-		int tickCount = (int) (mc.level.getGameTime() - start);
+		int tickCount = (int) (mc.level.getGameTime() - start.computeIfAbsent(mc.level, Level::getGameTime));
 	    <#if data.animations?size != 0>
 	        updateAnimation(itemstack, tickCount);
 	    </#if>
