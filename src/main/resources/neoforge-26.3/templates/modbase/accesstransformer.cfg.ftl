@@ -1,6 +1,4 @@
 <#if (w.getGElementsOfType("biome")?filter(e -> e.spawnBiome || e.spawnInCaves || e.spawnBiomeNether)?size != 0) || w.hasElementsOfType("endbiome")>
-public net.minecraft.world.level.levelgen.SurfaceRules$SequenceRuleSource
-public net.minecraft.world.level.levelgen.SurfaceRules$SequenceRuleSource <init>(Ljava/util/List;)V
 public net.minecraft.world.level.biome.MultiNoiseBiomeSourceParameterList$Preset$SourceProvider
 </#if>
 
@@ -8,13 +6,11 @@ public net.minecraft.world.level.biome.MultiNoiseBiomeSourceParameterList$Preset
 public net.minecraft.world.level.levelgen.feature.treedecorators.TreeDecoratorType <init>(Lcom/mojang/serialization/MapCodec;)V
 </#if>
 
-<#if types["features"]??>
-public net.minecraft.world.level.levelgen.feature.ScatteredOreFeature <init>(Lcom/mojang/serialization/Codec;)V
-public-f net.minecraft.world.level.levelgen.feature.TreeFeature place(Lnet/minecraft/world/level/levelgen/feature/FeaturePlaceContext;)Z
-</#if>
-
 <#if types["armors"]??>
 public-f net.minecraft.client.model.Model renderToBuffer(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;III)V
+public net.minecraft.client.renderer.feature.FeatureRenderDispatcher featureRenderers
+public net.minecraft.client.renderer.feature.RenderTypeFeatureRenderer currentGroup
+public net.minecraft.client.renderer.feature.RenderTypeFeatureRenderer getVertexBuilder(Lnet/minecraft/client/renderer/rendertype/RenderType;)Lcom/mojang/blaze3d/vertex/VertexConsumer;
 </#if>
 
 <#if types["fluids"]??>

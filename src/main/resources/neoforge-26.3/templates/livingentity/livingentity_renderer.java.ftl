@@ -136,7 +136,10 @@ public class ${name}Renderer extends <#if humanoid>Humanoid</#if>MobRenderer<${n
 
 			<@javacompress>
 			@Override public void submit(PoseStack poseStack, SubmitNodeCollector submitNodeCollector, int light, ${renderState} state, float headYaw, float headPitch) {
-				<#if hasProcedure(layer.condition)>
+				<#if layer.syncedDataCondition??>
+				<#assign needsEntityInState = true>
+				if (state.getRenderData(ENTITY_KEY).getEntityData().get(${name}Entity.DATA_${layer.syncedDataCondition})) {
+				<#elseif hasProcedure(layer.condition)>
 				<#assign needsEntityInState = true>
 				Entity entity = state.getRenderData(ENTITY_KEY);
 				Level world = entity.level();
@@ -149,13 +152,13 @@ public class ${name}Renderer extends <#if humanoid>Humanoid</#if>MobRenderer<${n
 				<#if layer.model != "Default">
 					LAYER_MODEL.setupAnim(state);
 					submitNodeCollector.submitModel(LAYER_MODEL, state, poseStack, RENDER_TYPE, light,
-						<#if layer.disableHurtOverlay>OverlayTexture.NO_OVERLAY<#else>LivingEntityRenderer.getOverlayCoords(state, 0)</#if>, state.outlineColor, null);
+						<#if layer.disableHurtOverlay>OverlayTexture.NO_OVERLAY<#else>LivingEntityRenderer.getOverlayCoords(state, 0)</#if>, state.outlineColor);
 				<#else>
 					submitNodeCollector.submitModel(this.getParentModel(), state, poseStack, RENDER_TYPE, light,
-						<#if layer.disableHurtOverlay>OverlayTexture.NO_OVERLAY<#else>LivingEntityRenderer.getOverlayCoords(state, 0)</#if>, state.outlineColor, null);
+						<#if layer.disableHurtOverlay>OverlayTexture.NO_OVERLAY<#else>LivingEntityRenderer.getOverlayCoords(state, 0)</#if>, state.outlineColor);
 				</#if>
 
-				<#if hasProcedure(layer.condition)>}</#if>
+				<#if layer.syncedDataCondition?? || hasProcedure(layer.condition)>}</#if>
 			}
 			</@javacompress>
 		});
@@ -176,7 +179,8 @@ public class ${name}Renderer extends <#if humanoid>Humanoid</#if>MobRenderer<${n
 	}
 
 	@Override public Identifier getTextureLocation(${renderState} state) {
-	    ${name}Entity entity = (${name}Entity) state.getRenderData(ENTITY_KEY);
+		<#assign needsEntityInState = true>
+		${name}Entity entity = state.getRenderData(ENTITY_KEY);
 		if (entity != null && entity.getTexture() != "${data.mobModelTexture?replace(".png", "")}")
 			return Identifier.parse("${modid}:textures/entities/" + entity.getTexture() + ".png");
 		return entityTexture;
@@ -278,6 +282,7 @@ public class ${name}Renderer extends <#if humanoid>Humanoid</#if>MobRenderer<${n
 	}
 	</#if>
 
+	<#if needsEntityInState>
 	public static final ContextKey<${name}Entity> ENTITY_KEY = new ContextKey<>(Identifier.parse("${modid}:${registryname}_entity"));
 
 	@EventBusSubscriber(Dist.CLIENT) public static class EntityStateAdder {
@@ -287,24 +292,33 @@ public class ${name}Renderer extends <#if humanoid>Humanoid</#if>MobRenderer<${n
 		}
 
 	}
+	</#if>
 
 }
 </@javacompress>
+
+<#macro ensureEntityReference>
+	<#if !(entityReferenceCreated!false)>
+		<#assign needsEntityInState = true>
+		${name}Entity entity = state.getRenderData(ENTITY_KEY);
+		<#assign entityReferenceCreated = true>
+	</#if>
+</#macro>
 
 <#macro setupAnim>
 	<#if !humanoid> <#-- HumanoidModel resets its pose in its setupAnim which is called before this one for this special case -->
 	this.root().getAllParts().forEach(ModelPart::resetPose);
 	</#if>
-	<#if data.animations?has_content>
-	${name}Entity entity = state.getRenderData(ENTITY_KEY);
-	</#if>
 	<#list data.animations as animation>
 		<#if !animation.walking>
-			<#assign needsEntityInState = true>
+			<@ensureEntityReference/>
 			this.keyframeAnimation${animation?index}.apply(entity.animationState${animation?index}, state.ageInTicks, ${animation.speed}f);
 		<#else>
-			<#if hasProcedure(animation.condition)>
-			<#assign needsEntityInState = true>
+			<#if animation.syncedDataCondition??>
+			<@ensureEntityReference/>
+			if (entity.getEntityData().get(${name}Entity.DATA_${animation.syncedDataCondition}))
+			<#elseif hasProcedure(animation.condition)>
+			<@ensureEntityReference/>
 			if (<@procedureCode animation.condition, {
 				"x": "entity.getX()",
 				"y": "entity.getY()",

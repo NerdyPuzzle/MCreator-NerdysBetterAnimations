@@ -92,8 +92,9 @@ package ${package}.client.renderer.item;
 		poseStack.pushPose();
 		poseStack.translate(0.5, displayContext == ItemDisplayContext.GUI ? 1.525 : displayContext == ItemDisplayContext.GROUND ? 2.0 : 1.5, 0.45);
 		poseStack.scale(1, -1, displayContext == ItemDisplayContext.GUI ? -1 : 1);
-		poseStack.mulPose(Axis.YP.rotationDegrees(displayContext == ItemDisplayContext.GUI ? 180f : 0));
+		poseStack.rotateDegrees(Axis.YP, displayContext == ItemDisplayContext.GUI ? 180f : 0);
 		poseStack.scale(-1, 1, 1);
+
 		renderState.ageInTicks = (mc.level.getGameTime() - start.computeIfAbsent(mc.level, Level::getGameTime)) + mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
 		<#if data.hasCustomJAVAModel() && data.animations?has_content>
 		boolean isFirstPerson = displayContext == ItemDisplayContext.FIRST_PERSON_LEFT_HAND || displayContext == ItemDisplayContext.FIRST_PERSON_RIGHT_HAND;
@@ -116,10 +117,10 @@ package ${package}.client.renderer.item;
 		}
 		</#if>
 
-		submitNodeCollector.submitModel(this.model, renderState, poseStack, texture, lightCoords, overlayCoords, outlineColor, null);
+		submitNodeCollector.submitModel(this.model, renderState, poseStack, texture, lightCoords, overlayCoords, outlineColor);
 
 		if (glint) {
-			submitNodeCollector.submitModel(this.model, renderState, poseStack, RenderTypes.entityGlint(), lightCoords, overlayCoords, -1, null);
+			submitNodeCollector.order(1).submitModel(this.model, renderState, poseStack, RenderTypes.patternedShieldGlint(), lightCoords, overlayCoords, 0);
 		}
 
 		poseStack.popPose();
@@ -203,7 +204,6 @@ package ${package}.client.renderer.item;
 
 	private void updateRenderState(ItemStack itemstack) {
 		Minecraft mc = Minecraft.getInstance();
-
 		int tickCount = (int) (mc.level.getGameTime() - start.computeIfAbsent(mc.level, Level::getGameTime));
 	    <#if data.animations?size != 0>
 	        updateAnimation(itemstack, tickCount);
