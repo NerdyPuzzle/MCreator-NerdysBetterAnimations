@@ -8,16 +8,16 @@ public net.minecraft.world.level.biome.MultiNoiseBiomeSourceParameterList$Preset
 public net.minecraft.world.level.levelgen.feature.treedecorators.TreeDecoratorType <init>(Lcom/mojang/serialization/MapCodec;)V
 </#if>
 
-<#if w.hasElementsOfType("feature")>
+<#if types["features"]??>
 public net.minecraft.world.level.levelgen.feature.ScatteredOreFeature <init>(Lcom/mojang/serialization/Codec;)V
 public-f net.minecraft.world.level.levelgen.feature.TreeFeature place(Lnet/minecraft/world/level/levelgen/feature/FeaturePlaceContext;)Z
 </#if>
 
-<#if w.hasElementsOfType("armor")>
+<#if types["armors"]??>
 public-f net.minecraft.client.model.Model renderToBuffer(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;III)V
 </#if>
 
-<#if w.hasElementsOfType("fluid")>
+<#if types["fluids"]??>
 public net.minecraft.world.entity.LivingEntity travelInWater(Lnet/minecraft/world/phys/Vec3;DZD)V
 public net.minecraft.world.entity.LivingEntity travelInLava(Lnet/minecraft/world/phys/Vec3;DZD)V
 public net.minecraft.world.entity.animal.axolotl.Axolotl travelInWater(Lnet/minecraft/world/phys/Vec3;DZD)V

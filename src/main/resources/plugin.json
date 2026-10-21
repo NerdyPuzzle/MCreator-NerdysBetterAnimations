@@ -2,12 +2,12 @@
   "id": "nerdys_better_animations",
   "weight": 69696,
   "supportedversions": [
-	2026002
+	2026003
   ],
   "javaplugin": "net.nerdypuzzle.betteranimations.Launcher",
   "info": {
     "name": "Nerdy's better animations",
-    "version": "1.5.6",
+    "version": "1.6",
     "description": "Improves upon the java animation system for entities and items",
     "author": "NerdyPuzzle"
   }
