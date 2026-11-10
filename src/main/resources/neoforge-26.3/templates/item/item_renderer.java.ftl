@@ -72,21 +72,22 @@ package ${package}.client.renderer.item;
 	private final Identifier texture;
 	private final ItemDisplayContext displayContext;
 
-	private final LivingEntityRenderState renderState;
 	private static final Map<Level, Long> start = new WeakHashMap<>();
 
 	private ${name}ItemRenderer(EntityModel<LivingEntityRenderState> model, Identifier texture, ItemDisplayContext displayContext) {
 		this.model = model;
 		this.texture = texture;
 		this.displayContext = displayContext;
-		this.renderState = new LivingEntityRenderState();
 	}
 
 	@Override public void submit(ItemStack itemstack, PoseStack poseStack, SubmitNodeCollector submitNodeCollector, int lightCoords, int overlayCoords, boolean glint, int outlineColor) {
 		Minecraft mc = Minecraft.getInstance();
 
+		CustomRenderState renderState = new CustomRenderState();
 		<#if data.hasCustomJAVAModel() && data.animations?has_content>
 		updateRenderState(itemstack);
+		renderState.animationStates = getAnimationState(itemstack);
+		renderState.displayContext = displayContext;
 		</#if>
 
 		poseStack.pushPose();
@@ -96,14 +97,6 @@ package ${package}.client.renderer.item;
 		poseStack.scale(-1, 1, 1);
 
 		renderState.ageInTicks = (mc.level.getGameTime() - start.computeIfAbsent(mc.level, Level::getGameTime)) + mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
-		<#if data.hasCustomJAVAModel() && data.animations?has_content>
-		boolean isFirstPerson = displayContext == ItemDisplayContext.FIRST_PERSON_LEFT_HAND || displayContext == ItemDisplayContext.FIRST_PERSON_RIGHT_HAND;
-		boolean isThirdPerson = displayContext == ItemDisplayContext.THIRD_PERSON_LEFT_HAND || displayContext == ItemDisplayContext.THIRD_PERSON_RIGHT_HAND;
-		if (model instanceof AnimatedModel animatedModel/*@perspective*/)
-			animatedModel.setupItemStackAnim(this, itemstack, renderState);
-		else
-		</#if>
-		model.setupAnim(renderState);
 
 		<#if data.hasCustomJAVAModel() && data.animations?has_content>
 		ModelPart root = model.root();
@@ -112,8 +105,8 @@ package ${package}.client.renderer.item;
 		PlayerModel playerModel = (PlayerModel) playerRenderer.getModel();
 		Identifier skinTexture = player.getSkin().body().texturePath();
 		if (!player.isInvisible()) {
-			searchAndRenderArm(root, "left_arm", playerModel, skinTexture, submitNodeCollector, poseStack, lightCoords, true, isFirstPerson);
-			searchAndRenderArm(root, "right_arm", playerModel, skinTexture, submitNodeCollector, poseStack, lightCoords, false, isFirstPerson);
+			searchAndRenderArm(root, "left_arm", playerModel, skinTexture, submitNodeCollector, poseStack, lightCoords, true);
+			searchAndRenderArm(root, "right_arm", playerModel, skinTexture, submitNodeCollector, poseStack, lightCoords, false);
 		}
 		</#if>
 
@@ -127,11 +120,11 @@ package ${package}.client.renderer.item;
 	}
 
     <#if data.hasCustomJAVAModel() && data.animations?has_content>
-	private void searchAndRenderArm(ModelPart root, String armName, PlayerModel playerModel, Identifier skinTexture, SubmitNodeCollector collector, PoseStack poseStack, int packedLight, boolean left, boolean firstPerson) {
+	private void searchAndRenderArm(ModelPart root, String armName, PlayerModel playerModel, Identifier skinTexture, SubmitNodeCollector collector, PoseStack poseStack, int packedLight, boolean left) {
 		List<ModelPart> parentChain = findParentChain(root, armName);
 		if (parentChain != null) {
 			ModelPart arm = parentChain.get(parentChain.size() - 1).getChild(armName);
-			if (firstPerson) {
+			if (displayContext == ItemDisplayContext.FIRST_PERSON_LEFT_HAND || displayContext == ItemDisplayContext.FIRST_PERSON_RIGHT_HAND) {
 				poseStack.pushPose();
 				for (ModelPart parent : parentChain) {
 					parent.translateAndRotate(poseStack);
@@ -193,6 +186,13 @@ package ${package}.client.renderer.item;
 
 		public record CustomBakingContext(BakingContext bakingContext, ItemDisplayContext display) {}
 
+	}
+
+	public static class CustomRenderState extends LivingEntityRenderState {
+		<#if data.hasCustomJAVAModel() && data.animations?has_content>
+		protected Map<Integer, AnimationState> animationStates;
+		protected ItemDisplayContext displayContext;
+		</#if>
 	}
 
 	<#if data.hasCustomJAVAModel() && data.animations?has_content>
@@ -287,12 +287,22 @@ package ${package}.client.renderer.item;
 			}
 		}
 
-		public void setupItemStackAnim(${name}ItemRenderer renderer, ItemStack itemstack, LivingEntityRenderState state) {
-			this.root().getAllParts().forEach(ModelPart::resetPose);
-			<#list data.animations as animation>
-			this.keyframeAnimation${animation?index}.apply(renderer.getAnimationState(itemstack).get(${animation?index}), state.ageInTicks, ${animation.speed}f);
-			</#list>
-			super.setupAnim(state);
+		<#-- Animations must be applied here and not at submit time, as the model is shared between
+			 all item stacks of this type and the actual rendering happens later -->
+		@Override public void setupAnim(LivingEntityRenderState state) {
+		    ItemDisplayContext displayContext = ((CustomRenderState) state).displayContext;
+    		boolean isFirstPerson = displayContext == ItemDisplayContext.FIRST_PERSON_LEFT_HAND || displayContext == ItemDisplayContext.FIRST_PERSON_RIGHT_HAND;
+    		boolean isThirdPerson = displayContext == ItemDisplayContext.THIRD_PERSON_LEFT_HAND || displayContext == ItemDisplayContext.THIRD_PERSON_RIGHT_HAND;
+    		if (true/*@perspective*/) {
+			    Map<Integer, AnimationState> animationStates = ((CustomRenderState) state).animationStates;
+			    this.root().getAllParts().forEach(ModelPart::resetPose);
+			    <#list data.animations as animation>
+			        this.keyframeAnimation${animation?index}.apply(animationStates.get(${animation?index}), state.ageInTicks, ${animation.speed}f);
+			    </#list>
+			    super.setupAnim(state);
+			} else {
+				super.setupAnim(state);
+			}
 		}
 
 	}
