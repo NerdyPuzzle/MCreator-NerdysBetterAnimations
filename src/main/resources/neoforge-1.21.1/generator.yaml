@@ -1,5 +1,3 @@
-base_templates:
-  - template: modbase/accesstransformer.cfg.ftl
-    usercodeComment: "#"
-    writer: file
-    name: "@RESROOT/META-INF/accesstransformer.cfg"
+fragments:
+  - type: accesstransformer
+    content: public-f net.minecraft.client.model.geom.ModelPart children
